@@ -1,0 +1,2 @@
+# ZyncOS
+Human-grade intuition, machine-grade precision. A dual-core AI system synchronizing reflex and memory.
