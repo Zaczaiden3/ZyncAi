@@ -600,92 +600,106 @@ export default function App() {
       const reflexEndTime = Date.now();
       setIsReflexActive(false);
 
-      // --- MEMORY CORE PHASE ---
-      setIsMemoryActive(true);
-      
-      const memoryMsgId = (Date.now() + 2).toString();
-      setMessages(prev => [...prev, {
-        id: memoryMsgId,
-        role: AIRole.MEMORY,
-        text: '', 
-        timestamp: Date.now(),
-        metrics: { latency: 0, tokens: 0, confidence: 90 }
-      }]);
-
-      const tasks = [
-        'DEFINING_PURPOSE', 
-        'DATA_ANALYSIS', 
-        'TEMPORAL_VECTOR_GRAPHING', 
-        'STATE_COMMUNICATION_PROTOCOL', 
-        'SENTIMENT_STATE_TRACKING', 
-        'VALIDATION_PROTOCOLS', 
-        'CONTEXTUAL_SYNTHESIS',
-        'DEPLOYMENT_OPTIMIZATION',
-        'MEMORY_WRITE'
-      ];
-      
-      let taskIndex = 0;
-      const taskInterval = setInterval(() => {
-        if (taskIndex < tasks.length - 1) {
-          setSystemStats(prev => ({ ...prev, currentTask: tasks[taskIndex] }));
-          taskIndex++;
-        }
-      }, 1500);
-
-      let memoryFullResponse = "";
-      let finalMemoryTokens = 0;
-      const memoryStartTime = Date.now();
-
-      const memoryStream = generateMemoryAnalysisStream(userText, reflexFullResponse, augmentedHistory, userImage, userAttachmentType);
-
-      for await (const update of memoryStream) {
-        memoryFullResponse = update.fullText;
-
-        const estimatedTokens = Math.ceil(update.fullText.length / 3);
-        finalMemoryTokens = update.tokens && update.tokens > 0 ? update.tokens : estimatedTokens;
+      // --- MEMORY CORE PHASE (Isolated Error Handling) ---
+      try {
+        setIsMemoryActive(true);
         
-        setMessages(prev => prev.map(msg => 
-          msg.id === memoryMsgId 
-            ? { 
-                ...msg, 
-                text: update.fullText, 
-                relatedFacts: update.facts,
-                metrics: {
-                  ...msg.metrics,
-                  tokens: finalMemoryTokens,
-                  latency: Date.now() - memoryStartTime
-                }
-              }
-            : msg
-        ));
+        const memoryMsgId = (Date.now() + 2).toString();
+        setMessages(prev => [...prev, {
+          id: memoryMsgId,
+          role: AIRole.MEMORY,
+          text: '', 
+          timestamp: Date.now(),
+          metrics: { latency: 0, tokens: 0, confidence: 90 }
+        }]);
+
+        const tasks = [
+          'DEFINING_PURPOSE', 
+          'DATA_ANALYSIS', 
+          'TEMPORAL_VECTOR_GRAPHING', 
+          'STATE_COMMUNICATION_PROTOCOL', 
+          'SENTIMENT_STATE_TRACKING', 
+          'VALIDATION_PROTOCOLS', 
+          'CONTEXTUAL_SYNTHESIS',
+          'DEPLOYMENT_OPTIMIZATION',
+          'MEMORY_WRITE'
+        ];
         
-         setSystemStats(prev => ({ 
-            ...prev, 
-            lastMemoryTokens: finalMemoryTokens,
-            memoryConfidence: Math.min(99, 85 + (update.fullText.length / 50)) 
-         }));
-      }
-      
-      // --- MEMORY STORAGE ---
-      // Store the interaction in vector memory
-      if (userText.length > 10) {
-          await memoryStore.add(`User: ${userText}\nAI: ${reflexFullResponse}`);
+        let taskIndex = 0;
+        const taskInterval = setInterval(() => {
+          if (taskIndex < tasks.length - 1) {
+            setSystemStats(prev => ({ ...prev, currentTask: tasks[taskIndex] }));
+            taskIndex++;
+          }
+        }, 1500);
+
+        let memoryFullResponse = "";
+        let finalMemoryTokens = 0;
+        const memoryStartTime = Date.now();
+
+        const memoryStream = generateMemoryAnalysisStream(userText, reflexFullResponse, augmentedHistory, userImage, userAttachmentType);
+
+        for await (const update of memoryStream) {
+          memoryFullResponse = update.fullText;
+
+          const estimatedTokens = Math.ceil(update.fullText.length / 3);
+          finalMemoryTokens = update.tokens && update.tokens > 0 ? update.tokens : estimatedTokens;
           
-          // Topological Memory Persistence
-          const memId = topologicalMemory.addMemory(userText, undefined, 1.0);
-          topologicalMemory.addMemory(reflexFullResponse, memId, systemStats.reflexConfidence / 100);
+          setMessages(prev => prev.map(msg => 
+            msg.id === memoryMsgId 
+              ? { 
+                  ...msg, 
+                  text: update.fullText, 
+                  relatedFacts: update.facts,
+                  metrics: {
+                    ...msg.metrics,
+                    tokens: finalMemoryTokens,
+                    latency: Date.now() - memoryStartTime
+                  }
+                }
+              : msg
+          ));
+          
+           setSystemStats(prev => ({ 
+              ...prev, 
+              lastMemoryTokens: finalMemoryTokens,
+              memoryConfidence: Math.min(99, 85 + (update.fullText.length / 50)) 
+           }));
+        }
+        
+        // --- MEMORY STORAGE ---
+        // Store the interaction in vector memory
+        if (userText.length > 10) {
+            await memoryStore.add(`User: ${userText}\nAI: ${reflexFullResponse}`);
+            
+            // Topological Memory Persistence
+            const memId = topologicalMemory.addMemory(userText, undefined, 1.0);
+            topologicalMemory.addMemory(reflexFullResponse, memId, systemStats.reflexConfidence / 100);
+        }
+        
+        clearInterval(taskInterval);
+        setSystemStats(prev => ({ ...prev, currentTask: 'DEPLOYMENT_COMPLETE' }));
+        
+      } catch (memoryError) {
+        console.warn("Memory Core Sync Failed (Non-Critical):", memoryError);
+        // Do NOT trigger Consensus if Reflex succeeded. Just notify.
+        setMessages(prev => [...prev, {
+            id: `mem-fail-${Date.now()}`,
+            role: AIRole.MEMORY,
+            text: '**[Memory Sync Interrupted]**\nDeep analysis unavailable. Reflex response stands.',
+            timestamp: Date.now(),
+            metrics: { latency: 0, tokens: 0, confidence: 0 }
+        }]);
+      } finally {
+        setIsMemoryActive(false);
+        setTimeout(() => {
+          setSystemStats(prev => ({ ...prev, currentTask: 'SYSTEM_IDLE' }));
+        }, 2000);
       }
-      
-      clearInterval(taskInterval);
-      setSystemStats(prev => ({ ...prev, currentTask: 'DEPLOYMENT_COMPLETE' }));
-      setIsMemoryActive(false);
-
-      setTimeout(() => {
-        setSystemStats(prev => ({ ...prev, currentTask: 'SYSTEM_IDLE' }));
-      }, 2000);
 
     } catch (error) {
-      console.error("Processing Error, engaging Consensus Protocol:", error);
+      // --- CRITICAL FAILURE: REFLEX CORE DOWN ---
+      console.error("Reflex Core Critical Failure, engaging Consensus Protocol:", error);
       setIsReflexActive(false);
       setIsMemoryActive(false);
       
@@ -795,6 +809,7 @@ export default function App() {
           <div className="flex items-center gap-4">
             <button 
                 onClick={() => setMobileMenuOpen(true)}
+                aria-label="Open menu"
                 className="md:hidden p-2 -ml-2 text-slate-400 hover:text-cyan-400 transition-colors"
             >
                 <Menu size={24} />
@@ -849,6 +864,7 @@ export default function App() {
             {showScrollButton && (
                 <button 
                     onClick={scrollToBottom}
+                    aria-label="Scroll to bottom"
                     className="fixed bottom-24 md:bottom-32 right-4 md:right-8 p-3 rounded-full bg-slate-800/80 border border-slate-700 text-cyan-400 shadow-lg backdrop-blur hover:bg-slate-700 transition-all z-30 animate-bounce"
                 >
                     <ArrowDown size={20} />
@@ -901,6 +917,7 @@ export default function App() {
                   onChange={handleFileChange}
                   accept="image/png, image/jpeg, image/webp, image/heic, .txt, .md, .json, .csv, .js, .ts, .tsx, .pdf"
                   className="hidden"
+                  aria-label="Upload file"
                 />
 
                 <div className="absolute inset-y-0 left-3 md:left-5 flex items-center gap-2">
@@ -947,6 +964,7 @@ export default function App() {
               />
               <button 
                 type="submit"
+                aria-label="Send message"
                 disabled={(!input.trim() && !selectedImage) || isReflexActive || isMemoryActive || isListening}
                 className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-slate-800 text-slate-400 
                           hover:bg-cyan-500 hover:text-white disabled:opacity-30 disabled:hover:bg-slate-800 disabled:hover:text-slate-400

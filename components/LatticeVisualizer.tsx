@@ -8,17 +8,25 @@ interface LatticeVisualizerProps {
 }
 
 const LatticeVisualizer: React.FC<LatticeVisualizerProps> = ({ nodes, edges, isActive }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [rotation, setRotation] = useState({ x: 0, y: 0 });
+  const rotatorRef = useRef<HTMLDivElement>(null);
+  const rotation = useRef({ x: 0, y: 0 });
 
-  // Auto-rotation effect
+  // Auto-rotation effect (Optimized: No React Render Loop)
   useEffect(() => {
     if (!isActive) return;
     let animationFrame: number;
+    
     const animate = () => {
-      setRotation(prev => ({ x: prev.x + 0.2, y: prev.y + 0.5 }));
+      rotation.current.x += 0.2;
+      rotation.current.y += 0.5;
+      
+      if (rotatorRef.current) {
+        rotatorRef.current.style.transform = `translateZ(-100px) rotateX(${rotation.current.x}deg) rotateY(${rotation.current.y}deg)`;
+      }
+      
       animationFrame = requestAnimationFrame(animate);
     };
+    
     animate();
     return () => cancelAnimationFrame(animationFrame);
   }, [isActive]);
@@ -52,10 +60,9 @@ const LatticeVisualizer: React.FC<LatticeVisualizerProps> = ({ nodes, edges, isA
       </div>
       
       <div 
+        ref={rotatorRef}
         className="w-full h-full preserve-3d absolute top-0 left-0 flex items-center justify-center transition-transform duration-100 ease-linear"
-        style={{ 
-          transform: `translateZ(-100px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)` 
-        }}
+        style={{ transform: 'translateZ(-100px) rotateX(0deg) rotateY(0deg)' }}
       >
         {/* Render Edges */}
         {edges.map((edge, i) => {
