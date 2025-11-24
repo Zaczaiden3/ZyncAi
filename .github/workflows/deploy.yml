@@ -4,20 +4,82 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - preview
+      skip_build:
+        description: 'Skip Build Step'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
+    name: Deploy to ${{ inputs.environment || 'production' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # Self-healing: Prevent stalled jobs from consuming quota
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js with Cache
+        uses: actions/setup-node@v4
         with:
           node-version: 18
-      - run: npm ci
-      - run: npm run build
-      - uses: amondnet/vercel-action@v20
+          cache: 'npm' # Self-healing: Resilient to registry outages via cache
+
+      - name: Install Dependencies
+        run: npm ci
+        continue-on-error: false
+
+      - name: Build Project
+        if: ${{ github.event_name == 'push' || !inputs.skip_build }}
+        run: npm run build
+
+      - name: Deploy to Vercel
+        id: vercel_deploy
+        uses: amondnet/vercel-action@v25
         with:
-          vercel-token: ${{ VOJnR65kxI0AtwgCuFPrNHUz }}
-          vercel-org-id: ${{ secrets.ORG_ID }}
-          vercel-project-id: ${{ secrets.PROJECT_ID }}
-          vercel-args: "--prod"
+          vercel-token: ${{ secrets.VERCEL_TOKEN }} # Ensure this secret is set in GitHub
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: ${{ (github.event_name == 'push' || inputs.environment == 'production') && '--prod' || '' }}
+          working-directory: ./
+
+      - name: Health Check (Self-healing Verification)
+        if: success()
+        run: |
+          echo "Verifying deployment health..."
+          URL="${{ steps.vercel_deploy.outputs.preview-url }}"
+          if [ -z "$URL" ]; then
+            echo "No deployment URL found. Skipping health check."
+            exit 0
+          fi
+          
+          echo "Checking URL: $URL"
+          # Retry up to 5 times with 5s delay to allow for propagation
+          for i in {1..5}; do
+            if curl -s -f "$URL" > /dev/null; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i failed. Retrying in 5s..."
+            sleep 5
+          done
+          
+          echo "Health check failed after 5 attempts."
+          exit 1

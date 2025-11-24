@@ -30,11 +30,13 @@
 
 - [x] **Counterfactual Persona Simulation**
   - [x] Implement `PersonaSimulator` with multiple personas.
+  - [x] Connect Simulator to UI via Command Palette (`/simulate`).
 
 - [x] **Visualization & Transparency**
   - [x] Add "Confidence Shaders" to `MessageItem`.
   - [x] Add Neuro Confidence metric to `SystemVisualizer`.
   - [x] Create `NEURO` role for distinct visual feedback.
+  - [x] Implement 3D `LatticeVisualizer` for Neuro-Symbolic graph.
 
 ## Phase 3: Optimization & Deployment
 
