@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Terminal, AlertCircle, Check, ArrowRight, Activity, Fingerprint, Lock, Mail, User, Cpu, Bug, Github, Shield } from 'lucide-react';
+import { loginUser, registerUser } from '../services/auth';
 import './LoginPage.css';
 
 interface LoginPageProps {
@@ -34,7 +35,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGlitch }) => {
     }
   }, [fullName, email, mode]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (status === 'PROCESSING') return; // Prevent double submit
     
@@ -57,15 +58,27 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGlitch }) => {
         return;
     }
 
-    // Success Sequence
-    const processingTime = mode === 'signup' ? 2500 : 1200; // Longer boot sequence for signup
+    try {
+        let result;
+        if (mode === 'signup') {
+            result = await registerUser(email, password, fullName);
+        } else {
+            result = await loginUser(email, password);
+        }
 
-    setTimeout(() => {
-        setStatus('SUCCESS');
-        setTimeout(() => {
-            onLogin();
-        }, 800); // Wait for warp animation
-    }, processingTime);
+        if (result.error) {
+            triggerFailure(`AUTH_FAILURE: ${result.error.toUpperCase()}`);
+        } else {
+            // Success Sequence
+            setStatus('SUCCESS');
+            setTimeout(() => {
+                onLogin();
+            }, 800); // Wait for warp animation
+        }
+    } catch (err) {
+        triggerFailure("SYSTEM_ERROR: CONNECTION LOST");
+        console.error(err);
+    }
   };
 
   const triggerFailure = (msg: string) => {

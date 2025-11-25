@@ -12,9 +12,10 @@ import { memoryStore } from './services/vectorDb';
 import { Send, Activity, Terminal, Command, Menu, ArrowDown, Paperclip, ImageIcon, Trash2, RefreshCw, Download, Lock, Network, Users, Plus, FileJson, Layers } from 'lucide-react';
 import { neuroSymbolicCore } from './cores/neuro-symbolic/NeuroSymbolicCore';
 import { LatticeNode, LatticeEdge } from './cores/neuro-symbolic/types';
-import { topologicalMemory } from './cores/memory/TopologicalMemory';
 import { personaSimulator } from './cores/simulation/PersonaSimulator';
 import { sessionManager, ChatSession } from './services/sessionManager';
+import { subscribeToAuthChanges, logoutUser } from './services/auth';
+import { topologicalMemory } from './cores/memory/TopologicalMemory';
 
 export default function App() {
   // Authentication State
@@ -23,8 +24,13 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('ZYNC_AUTH_STATE', String(isAuthenticated));
-  }, [isAuthenticated]);
+    const unsubscribe = subscribeToAuthChanges((user) => {
+      const isAuth = !!user;
+      setIsAuthenticated(isAuth);
+      localStorage.setItem('ZYNC_AUTH_STATE', String(isAuth));
+    });
+    return () => unsubscribe();
+  }, []);
   const [isSystemGlitching, setIsSystemGlitching] = useState(false);
 
   const [input, setInput] = useState('');
@@ -343,8 +349,6 @@ export default function App() {
   // Voice Input Handler
   const handleVoiceTranscript = (text: string) => {
       setInput(text);
-      // Optional: Auto-send on voice end? 
-      // For now, we just populate the field to let user review "NLU" input before firing.
   };
 
   // Command Actions
@@ -358,8 +362,6 @@ export default function App() {
         metrics: { latency: 5, tokens: 10, confidence: 100 }
       }
     ]);
-    // Optional: Clear vector memory too?
-    // memoryStore.clear(); 
   };
 
   const handleResetSystem = () => {
@@ -394,7 +396,6 @@ export default function App() {
   };
 
   const handleExportLogs = () => {
-    // Export as JSON
     const jsonContent = sessionManager.exportSessionToJson(currentSession);
     const blob = new Blob([jsonContent], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -404,17 +405,10 @@ export default function App() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('ZYNC_AUTH_STATE');
   };
 
   const handleSimulatePersonas = async () => {
-    // Find last user message
-    const lastUserMsg = [...messages].reverse().find(m => m.role === AIRole.USER);
+    const lastUserMsg = messages.slice().reverse().find(m => m.role === AIRole.USER);
     if (!lastUserMsg) return;
 
     const query = lastUserMsg.text;
@@ -423,7 +417,6 @@ export default function App() {
     setMobileMenuOpen(false);
     setIsPaletteOpen(false);
 
-    // Announce Simulation
     setMessages(prev => [...prev, {
         id: `sim-start-${Date.now()}`,
         role: AIRole.NEURO,
@@ -432,19 +425,17 @@ export default function App() {
         metrics: { latency: 10, tokens: 15, confidence: 100 }
     }]);
 
-    // Run simulations sequentially for visual clarity (could be parallel)
     for (const persona of personas) {
         const msgId = `sim-${persona.id}-${Date.now()}`;
         setMessages(prev => [...prev, {
             id: msgId,
-            role: AIRole.REFLEX, // Use Reflex role for the output but styled differently via text
+            role: AIRole.REFLEX,
             text: `**[Persona: ${persona.name}]**\nInitializing...`,
             timestamp: Date.now(),
             metrics: { latency: 0, tokens: 0, confidence: 0 }
         }]);
 
         const stream = generateReflexResponseStream(query, messages, null, null, persona.systemPrompt);
-        let fullText = `**[Persona: ${persona.name}]**\n`;
         
         for await (const update of stream) {
             setMessages(prev => prev.map(m => m.id === msgId ? {
@@ -453,6 +444,17 @@ export default function App() {
                 metrics: { ...m.metrics, tokens: update.tokens, latency: 50 }
             } : m));
         }
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setIsAuthenticated(false);
+      setCurrentSession(sessionManager.createSession());
+      setMessages([]);
+    } catch (error) {
+      console.error("Logout failed:", error);
     }
   };
 
@@ -524,7 +526,7 @@ export default function App() {
       id: 'logout',
       label: 'Terminate Session',
       description: 'Logout and return to secure gateway',
-      icon: <Lock size={18} />, // Using Lock icon imported from lucide-react
+      icon: <Lock size={18} />,
       action: handleLogout
     }
   ];
@@ -539,10 +541,8 @@ export default function App() {
     
     setInput('');
     clearImage();
-    // Force scroll to bottom on send
     setIsAtBottom(true);
     
-    // 1. Add User Message
     const userMsg: Message = {
       id: Date.now().toString(),
       role: AIRole.USER,
@@ -555,7 +555,6 @@ export default function App() {
 
     try {
       // --- NEURO-SYMBOLIC CORE PHASE ---
-      // 0. Neuro-Symbolic Reasoning (Pre-computation)
       const reasoning = neuroSymbolicCore.reason(userText);
       setNeuroTrace(reasoning.reasoningTrace);
       setSystemStats(prev => ({ ...prev, neuroConfidence: reasoning.confidence * 100 }));
@@ -578,12 +577,9 @@ export default function App() {
       const reflexStartTime = Date.now();
 
       // --- MEMORY RETRIEVAL (RAG) ---
-      // Search for relevant past context before generating response
       const relevantMemories = await memoryStore.search(userText);
       const memoryContext = relevantMemories.map(m => `[Past Memory]: ${m.content}`).join('\n');
       
-      // Inject memory context into history for the AI to see
-      // We don't display this to the user, but we pass it to the generator
       const augmentedHistory = [...messages];
       if (memoryContext) {
           augmentedHistory.push({

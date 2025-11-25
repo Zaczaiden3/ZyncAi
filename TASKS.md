@@ -13,9 +13,10 @@
   - [ ] Secure API keys (ensure they are not exposed in client-side bundles if possible, or use a proxy).
   - [ ] Add user profiles and settings (e.g., preferred voice, theme overrides).
 
-- [ ] **Testing & Quality Assurance**
-  - [ ] Set up Vitest or Jest for unit testing utility functions.
-  - [ ] Create component tests for `SystemVisualizer` and `MessageItem`.
+- [x] **Testing & Quality Assurance**
+  - [x] Set up Vitest or Jest for unit testing utility functions.
+  - [x] Create component tests for `MessageItem`.
+  - [ ] Create component tests for `SystemVisualizer`.
 
 ## Phase 2: Zync AI Cores (New Architecture)
 
