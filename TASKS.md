@@ -4,8 +4,8 @@
 
 - [x] **Persistence Layer**
   - [x] Implement `localStorage` or `IndexedDB` to persist chat history across reloads.
-  - [ ] Create a `SessionManager` to handle multiple chat sessions.
-  - [ ] Add "Export to JSON" functionality for backup.
+  - [x] Create a `SessionManager` to handle multiple chat sessions.
+  - [x] Add "Export to JSON" functionality for backup.
 
 - [ ] **Authentication System**
   - [x] Persist authentication state locally (keep user logged in).

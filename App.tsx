@@ -9,15 +9,14 @@ import LoginPage from './components/LoginPage';
 import VoiceInput from './components/VoiceInput';
 import { extractPdfText } from './services/pdf';
 import { memoryStore } from './services/vectorDb';
-import { Send, Activity, Terminal, Command, Menu, ArrowDown, Paperclip, ImageIcon, Trash2, RefreshCw, Download, Lock, Network } from 'lucide-react';
+import { Send, Activity, Terminal, Command, Menu, ArrowDown, Paperclip, ImageIcon, Trash2, RefreshCw, Download, Lock, Network, Users, Plus, FileJson, Layers } from 'lucide-react';
 import { neuroSymbolicCore } from './cores/neuro-symbolic/NeuroSymbolicCore';
 import { LatticeNode, LatticeEdge } from './cores/neuro-symbolic/types';
 import { topologicalMemory } from './cores/memory/TopologicalMemory';
 import { personaSimulator } from './cores/simulation/PersonaSimulator';
-import { Users } from 'lucide-react';
+import { sessionManager, ChatSession } from './services/sessionManager';
 
 export default function App() {
-  // Authentication State
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('ZYNC_AUTH_STATE') === 'true';
@@ -45,37 +44,60 @@ export default function App() {
   const [neuroTrace, setNeuroTrace] = useState<string | null>(null);
   const [activeLattice, setActiveLattice] = useState<{ nodes: LatticeNode[], edges: LatticeEdge[] }>({ nodes: [], edges: [] });
 
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = localStorage.getItem('ZYNC_CHAT_HISTORY');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Failed to parse chat history", e);
-      }
-    }
-    return [
-      {
-        id: 'init-1',
-        role: AIRole.REFLEX,
-        text: 'Zync Reflex Core Online. Rapid data streams active.',
-        timestamp: Date.now(),
-        metrics: { latency: 12, tokens: 45, confidence: 99 }
-      },
-      {
-        id: 'init-2',
-        role: AIRole.MEMORY,
-        text: 'Zync Memory Core Synchronized. Cognitive Core Upgrade: Contextual Synthesis Active. Developmental Process Framework loaded.',
-        timestamp: Date.now(),
-        metrics: { latency: 45, tokens: 120, confidence: 98 }
-      }
-    ];
-  });
+  // Session State
+  const [currentSession, setCurrentSession] = useState<ChatSession>(() => sessionManager.getActiveSession());
+  const [sessions, setSessions] = useState<ChatSession[]>(() => sessionManager.getSessions());
+  
+  // Sync messages with current session
+  const [messages, setMessages] = useState<Message[]>(currentSession.messages);
 
-  // Persistence Effect
+  // Update session when messages change
   useEffect(() => {
-    localStorage.setItem('ZYNC_CHAT_HISTORY', JSON.stringify(messages));
-  }, [messages]);
+    sessionManager.saveSessionMessages(currentSession.id, messages);
+    // Update local session state to reflect changes (avoid full re-render of sessions list if possible, but keeping it simple)
+    setCurrentSession(prev => ({ ...prev, messages }));
+  }, [messages, currentSession.id]);
+
+  // Refresh sessions list when palette opens (to ensure we have latest if modified elsewhere)
+  useEffect(() => {
+    if (isPaletteOpen) {
+      setSessions(sessionManager.getSessions());
+    }
+  }, [isPaletteOpen]);
+
+  const handleSwitchSession = (sessionId: string) => {
+    const session = sessionManager.getSession(sessionId);
+    if (session) {
+      sessionManager.setActiveSession(sessionId);
+      setCurrentSession(session);
+      setMessages(session.messages);
+      setSessions(sessionManager.getSessions());
+      
+      // Add system message to indicate switch
+      setMessages(prev => [...prev, {
+          id: `sys-switch-${Date.now()}`,
+          role: AIRole.REFLEX,
+          text: `**Session Switched**\nActive Session: ${session.name}`,
+          timestamp: Date.now(),
+          metrics: { latency: 0, tokens: 0, confidence: 100 }
+      }]);
+    }
+  };
+
+  const handleNewSession = () => {
+    const newSession = sessionManager.createSession();
+    setCurrentSession(newSession);
+    setMessages(newSession.messages);
+    setSessions(sessionManager.getSessions());
+  };
+
+  const handleDeleteSession = (sessionId: string) => {
+    sessionManager.deleteSession(sessionId);
+    const active = sessionManager.getActiveSession();
+    setCurrentSession(active);
+    setMessages(active.messages);
+    setSessions(sessionManager.getSessions());
+  };
 
   // State for System Visualizer & Layout
   const [isReflexActive, setIsReflexActive] = useState(false);
@@ -372,15 +394,13 @@ export default function App() {
   };
 
   const handleExportLogs = () => {
-    const logContent = messages.map(m => 
-      `[${new Date(m.timestamp).toISOString()}] [${m.role}]: ${m.text}${m.attachment ? ' [Image Attached]' : ''}`
-    ).join('\n\n');
-    
-    const blob = new Blob([logContent], { type: 'text/plain' });
+    // Export as JSON
+    const jsonContent = sessionManager.exportSessionToJson(currentSession);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `zync_logs_${new Date().toISOString().slice(0,10)}.txt`;
+    a.download = `zync_session_${currentSession.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -438,6 +458,20 @@ export default function App() {
 
   const commands: CommandOption[] = [
     {
+      id: 'new-session',
+      label: 'New Session',
+      description: 'Create a fresh chat session',
+      icon: <Plus size={18} />,
+      action: handleNewSession
+    },
+    ...sessions.filter(s => s.id !== currentSession.id).map(s => ({
+        id: `switch-${s.id}`,
+        label: `Switch to: ${s.name}`,
+        description: `Last active: ${new Date(s.lastModified).toLocaleTimeString()}`,
+        icon: <Layers size={18} />,
+        action: () => handleSwitchSession(s.id)
+    })),
+    {
       id: 'upload-image',
       label: 'Upload Image',
       description: 'Attach an image file to the chat context',
@@ -446,10 +480,17 @@ export default function App() {
     },
     {
       id: 'clear-chat',
-      label: 'Clear Session',
+      label: 'Clear Current Session',
       description: 'Reset the conversation history',
       icon: <Trash2 size={18} />,
       action: handleClearChat
+    },
+    {
+      id: 'delete-session',
+      label: 'Delete Current Session',
+      description: 'Permanently remove this session',
+      icon: <Trash2 size={18} className="text-red-400" />,
+      action: () => handleDeleteSession(currentSession.id)
     },
     {
       id: 'system-reset',
@@ -460,9 +501,9 @@ export default function App() {
     },
     {
       id: 'export-logs',
-      label: 'Download Telemetry Logs',
-      description: 'Export current session as text file',
-      icon: <Download size={18} />,
+      label: 'Export Session (JSON)',
+      description: 'Download current session data',
+      icon: <FileJson size={18} />,
       action: handleExportLogs
     },
     {
