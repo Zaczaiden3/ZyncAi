@@ -24,6 +24,33 @@ export default defineConfig(({ mode }) => {
         globals: true,
         environment: 'jsdom',
         setupFiles: './src/test/setup.ts',
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks(id) {
+              if (id.includes('node_modules')) {
+                if (id.includes('react') || id.includes('react-dom')) {
+                  return 'react-vendor';
+                }
+                if (id.includes('recharts')) {
+                  return 'recharts';
+                }
+                if (id.includes('lucide-react')) {
+                  return 'lucide';
+                }
+                if (id.includes('pdfjs-dist')) {
+                  return 'pdfjs';
+                }
+                if (id.includes('@google/genai')) {
+                  return 'genai';
+                }
+                return 'vendor';
+              }
+            }
+          }
+        },
+        chunkSizeWarningLimit: 1000
       }
     };
 });
