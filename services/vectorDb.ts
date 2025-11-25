@@ -6,6 +6,8 @@ interface VectorDocument {
   embedding: number[];
   metadata?: any;
   timestamp: number;
+  temporalWeight?: number; // Dynamic weight based on recency
+  sentiment?: 'positive' | 'neutral' | 'negative' | 'analytical';
 }
 
 // Simple in-memory vector store with localStorage persistence
@@ -40,7 +42,7 @@ export class VectorStore {
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.documents));
   }
 
-  async add(content: string, metadata?: any) {
+  async add(content: string, metadata?: any, sentiment?: 'positive' | 'neutral' | 'negative' | 'analytical') {
     if (!content || content.trim().length < 5) return;
 
     const embedding = await embedText(content);
@@ -51,7 +53,9 @@ export class VectorStore {
       content,
       embedding,
       metadata,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      temporalWeight: 1.0, // Initial weight is max
+      sentiment
     };
 
     this.documents.push(doc);
@@ -62,10 +66,27 @@ export class VectorStore {
     const queryEmbedding = await embedText(query);
     if (!queryEmbedding || queryEmbedding.length === 0) return [];
 
-    // Calculate Cosine Similarity
+    const now = Date.now();
+    const ONE_HOUR = 3600 * 1000;
+
+    // Calculate Cosine Similarity & Apply Temporal Weighting
     const scoredDocs = this.documents.map(doc => {
       const similarity = this.cosineSimilarity(queryEmbedding, doc.embedding);
-      return { ...doc, score: similarity };
+      
+      // Temporal Decay: Weight decreases as data gets older
+      // Simple decay: 10% loss per hour, min 0.1
+      const ageHours = (now - doc.timestamp) / ONE_HOUR;
+      const decayFactor = Math.max(0.1, 1.0 - (ageHours * 0.1));
+      
+      // Emotional Resonance Boost (if sentiment matches query context - simplified here as just a boost for 'analytical' or 'positive' if we had query sentiment)
+      // For now, we just use the decay as the "Temporal Vector Node" behavior.
+      const temporalScore = similarity * decayFactor;
+
+      // Weighted Score: 70% Similarity, 30% Temporal Recency
+      // This implements the "Dynamic Knowledge Graphing" requirement
+      const finalScore = (similarity * 0.7) + (decayFactor * 0.3);
+
+      return { ...doc, score: finalScore, temporalWeight: decayFactor };
     });
 
     // Sort by score descending

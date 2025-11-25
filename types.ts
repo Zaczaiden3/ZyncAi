@@ -20,6 +20,7 @@ export interface Message {
   };
   relatedFacts?: string[]; // For Memory AI to display extracted context
   sources?: { title: string; uri: string }[]; // Grounding sources (Real-time data)
+  sentiment?: 'positive' | 'neutral' | 'negative' | 'analytical'; // Sentiment analysis of the message
 }
 
 export interface SystemStats {
@@ -41,4 +42,6 @@ export interface MemoryNode {
   concept: string;
   strength: number; // 0-100
   lastAccessed: number;
+  temporalWeight?: number; // 0-1, decays over time
+  sentimentState?: 'positive' | 'neutral' | 'negative' | 'analytical';
 }

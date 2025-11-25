@@ -133,7 +133,8 @@ const SystemVisualizer: React.FC<SystemVisualizerProps> = ({
 
     const backgroundTasks = [
       'GARBAGE_COLLECTION', 'CACHE_FLUSH', 'PING_CHECK: 12ms', 
-      'INDEX_REVALIDATE', 'MEM_OPTIMIZE', 'DAEMON_SYNC', 'VECTOR_NORMALIZE'
+      'INDEX_REVALIDATE', 'MEM_OPTIMIZE', 'DAEMON_SYNC', 'VECTOR_NORMALIZE',
+      'HEAP_COMPACTION', 'THREAD_POOL_ADJUST', 'SOCKET_KEEPALIVE', 'ENTROPY_CHECK'
     ];
 
     const interval = setInterval(() => {

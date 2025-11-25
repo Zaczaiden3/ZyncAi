@@ -1,6 +1,6 @@
 import React from 'react';
 import { Message, AIRole } from '../types';
-import { User, Zap, BrainCircuit, Clock, CheckCircle2, Globe, ExternalLink, ShieldAlert, ImageIcon, FileText, Network } from 'lucide-react';
+import { User, Zap, BrainCircuit, Clock, CheckCircle2, Globe, ExternalLink, ShieldAlert, ImageIcon, FileText, Network, Copy, Check } from 'lucide-react';
 import TTSPlayer from './TTSPlayer';
 import './MessageItem.css';
 
@@ -14,16 +14,41 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   const isMemory = message.role === AIRole.MEMORY;
   const isConsensus = message.role === AIRole.CONSENSUS;
   const isNeuro = message.role === AIRole.NEURO;
+  const [isCopied, setIsCopied] = React.useState(false);
+
+  const handleCopy = async () => {
+    if (message.text) {
+      await navigator.clipboard.writeText(message.text);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
 
   // Simple Markdown-like parser for formatting
-  const parseBold = (text: string) => {
-    // Split by **text**
-    const parts = text.split(/(\*\*.*?\*\*)/g);
-    return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={index} className={`font-bold ${isReflex ? 'text-cyan-200' : isMemory ? 'text-fuchsia-200' : isNeuro ? 'text-emerald-200' : 'text-slate-200'}`}>{part.slice(2, -2)}</strong>;
+  const parseMarkdown = (text: string) => {
+    // 1. Handle Inline Code (`code`)
+    const codeParts = text.split(/(`[^`]+`)/g);
+    return codeParts.map((part, i) => {
+      if (part.startsWith('`') && part.endsWith('`')) {
+        return <code key={i} className="bg-black/30 px-1.5 py-0.5 rounded text-[0.9em] font-mono text-amber-200 border border-amber-500/20">{part.slice(1, -1)}</code>;
       }
-      return <span key={index}>{part}</span>;
+      
+      // 2. Handle Bold (**text**)
+      const boldParts = part.split(/(\*\*.*?\*\*)/g);
+      return boldParts.map((subPart, j) => {
+        if (subPart.startsWith('**') && subPart.endsWith('**')) {
+           return <strong key={`${i}-${j}`} className={`font-bold ${isReflex ? 'text-cyan-200' : isMemory ? 'text-fuchsia-200' : isNeuro ? 'text-emerald-200' : 'text-slate-200'}`}>{subPart.slice(2, -2)}</strong>;
+        }
+
+        // 3. Handle Italic (*text*)
+        const italicParts = subPart.split(/(\*[^*]+\*)/g);
+        return italicParts.map((subSubPart, k) => {
+            if (subSubPart.startsWith('*') && subSubPart.endsWith('*')) {
+                return <em key={`${i}-${j}-${k}`} className="italic opacity-90">{subSubPart.slice(1, -1)}</em>;
+            }
+            return <span key={`${i}-${j}-${k}`}>{subSubPart}</span>;
+        });
+      });
     });
   };
 
@@ -37,10 +62,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           
           // Headers
           if (line.startsWith('### ')) {
-            return <h3 key={i} className={`text-sm font-bold mt-3 mb-1 uppercase tracking-wide opacity-90 ${isReflex ? 'text-cyan-300' : isMemory ? 'text-fuchsia-300' : isNeuro ? 'text-emerald-300' : 'text-amber-300'}`}>{parseBold(line.replace('### ', ''))}</h3>
+            return <h3 key={i} className={`text-sm font-bold mt-3 mb-1 uppercase tracking-wide opacity-90 ${isReflex ? 'text-cyan-300' : isMemory ? 'text-fuchsia-300' : isNeuro ? 'text-emerald-300' : 'text-amber-300'}`}>{parseMarkdown(line.replace('### ', ''))}</h3>
           }
           if (line.startsWith('## ')) {
-             return <h2 key={i} className={`text-base font-bold mt-4 mb-2 ${isReflex ? 'text-cyan-100' : isMemory ? 'text-fuchsia-100' : isNeuro ? 'text-emerald-100' : 'text-amber-100'}`}>{parseBold(line.replace('## ', ''))}</h2>
+             return <h2 key={i} className={`text-base font-bold mt-4 mb-2 ${isReflex ? 'text-cyan-100' : isMemory ? 'text-fuchsia-100' : isNeuro ? 'text-emerald-100' : 'text-amber-100'}`}>{parseMarkdown(line.replace('## ', ''))}</h2>
           }
           
           // List Items
@@ -49,7 +74,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
              return (
                  <div key={i} className="flex gap-2 ml-1">
                      <span className={`mt-1.5 w-1 h-1 rounded-full shrink-0 ${isReflex ? 'bg-cyan-500' : isMemory ? 'bg-fuchsia-500' : isNeuro ? 'bg-emerald-500' : 'bg-slate-500'}`}></span>
-                     <div className="leading-relaxed">{parseBold(content)}</div>
+                     <div className="leading-relaxed">{parseMarkdown(content)}</div>
                  </div>
              )
           }
@@ -61,7 +86,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
              return (
                  <div key={i} className="flex gap-2 ml-1">
                      <span className="font-mono opacity-70 shrink-0">{number}.</span>
-                     <div className="leading-relaxed">{parseBold(content)}</div>
+                     <div className="leading-relaxed">{parseMarkdown(content)}</div>
                  </div>
              )
           }
@@ -70,7 +95,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           if (!trimmed) return <div key={i} className="h-2"></div>;
 
           // Standard paragraph
-          return <div key={i} className="leading-relaxed">{parseBold(line)}</div>
+          return <div key={i} className="leading-relaxed">{parseMarkdown(line)}</div>
         })}
       </div>
     );
@@ -132,11 +157,22 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             ${isMemory ? 'bg-fuchsia-950/20 text-fuchsia-50 border-fuchsia-500/20 rounded-tl-none' : ''}
             ${isNeuro ? 'bg-emerald-950/20 text-emerald-50 border-emerald-500/20 rounded-tl-none' : ''}
             ${isConsensus ? 'bg-amber-950/20 text-amber-50 border-amber-500/20 rounded-tl-none' : ''}
-            message-bubble
+            message-bubble group relative
           `}
           style={{
              '--dynamic-border-color': message.metrics?.confidence ? `rgba(${isNeuro ? '16, 185, 129' : isReflex ? '6, 182, 212' : isMemory ? '217, 70, 239' : '255, 255, 255'}, ${message.metrics.confidence / 100})` : undefined,
           } as React.CSSProperties}>
+            {/* Copy Button */}
+            <button 
+              onClick={handleCopy}
+              className={`
+                absolute top-2 right-2 p-1.5 rounded-md transition-all duration-300 opacity-0 group-hover:opacity-100
+                ${isCopied ? 'bg-green-500/20 text-green-400' : 'bg-black/20 text-slate-400 hover:bg-black/40 hover:text-white'}
+              `}
+              aria-label="Copy message"
+            >
+              {isCopied ? <Check size={12} /> : <Copy size={12} />}
+            </button>
             {/* Attachment Display */}
             {message.attachment && (
               <div className="mb-3 rounded-lg overflow-hidden border border-slate-700/50 bg-black/30 relative group">

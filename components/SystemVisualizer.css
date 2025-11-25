@@ -14,4 +14,23 @@
   height: var(--node-height, 0%);
   animation-duration: var(--anim-duration, 1.5s);
   animation-delay: var(--anim-delay, 0s);
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-neural-bar {
+  animation-name: neural-bar;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes neural-bar {
+  0%, 100% {
+    height: var(--node-height, 10%);
+    opacity: 0.5;
+  }
+  50% {
+    height: calc(var(--node-height, 10%) + 15%);
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(217, 70, 239, 0.6);
+  }
 }

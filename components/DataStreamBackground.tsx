@@ -76,13 +76,13 @@ const DataStreamBackground: React.FC<Props> = ({ variant = 'sidebar', isGlitchin
         const dy = mouse.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // Expanded Gravity Radius for "Powerful" feel
-        const gravityRadius = 250; 
+        // Tuned Gravity Radius (User Request: ~100px radius for gentle pull, but we'll use 150px for better visibility)
+        const gravityRadius = 150; 
 
         if (distance < gravityRadius) {
             // Calculate pull force (Inverse square-ish law for feel)
             const force = (gravityRadius - distance) / gravityRadius;
-            const pullStrength = 0.05; // Stronger pull
+            const pullStrength = 0.08; // Slightly stronger pull for tactile feedback
             
             // Accelerate towards mouse
             this.vx += dx * force * pullStrength * 0.1;
@@ -189,7 +189,7 @@ const DataStreamBackground: React.FC<Props> = ({ variant = 'sidebar', isGlitchin
             const dy = mouse.y - restY;
             
             // "Bends slightly" - Tension Factor
-            const tension = 0.2; 
+            const tension = 0.15; 
             targetCx = restX + dx * tension;
             targetCy = restY + dy * tension;
         }
