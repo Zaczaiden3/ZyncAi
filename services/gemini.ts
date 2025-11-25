@@ -3,7 +3,7 @@ import { Message, AIRole } from "../types";
 
 // Initialize the client
 // Note: API_KEY is assumed to be in process.env
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 export interface StreamUpdate {
   text?: string;
@@ -177,7 +177,7 @@ export async function* generateReflexResponseStream(
       accumulatedText += chunkText;
 
       if (chunk.usageMetadata) {
-        totalTokens = chunk.usageMetadata.totalTokenCount;
+        totalTokens = chunk.usageMetadata.totalTokenCount ?? 0;
       }
 
       // Extract grounding sources if available in this chunk
@@ -297,7 +297,7 @@ export async function* generateMemoryAnalysisStream(
       accumulatedText += chunkText;
 
       if (chunk.usageMetadata) {
-        totalTokens = chunk.usageMetadata.totalTokenCount;
+        totalTokens = chunk.usageMetadata.totalTokenCount ?? 0;
       }
 
       // Clean the text for display: prevent the separator or raw JSON from appearing in the UI stream
@@ -418,7 +418,7 @@ export async function* generateConsensusRecoveryStream(
       accumulatedText += chunkText;
 
       if (chunk.usageMetadata) {
-        totalTokens = chunk.usageMetadata.totalTokenCount;
+        totalTokens = chunk.usageMetadata.totalTokenCount ?? 0;
       }
       
       const currentLatency = Date.now() - startTime;

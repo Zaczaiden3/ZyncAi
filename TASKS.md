@@ -3,33 +3,38 @@
 ## Phase 1: Foundation & Stability (Current Focus)
 
 - [x] **Persistence Layer**
+
   - [x] Implement `localStorage` or `IndexedDB` to persist chat history across reloads.
   - [x] Create a `SessionManager` to handle multiple chat sessions.
   - [x] Add "Export to JSON" functionality for backup.
 
-- [ ] **Authentication System**
+- [x] **Authentication System**
+
   - [x] Persist authentication state locally (keep user logged in).
-  - [ ] Replace mock `LoginPage` with real authentication (e.g., Firebase Auth, Supabase, or Clerk).
-  - [ ] Secure API keys (ensure they are not exposed in client-side bundles if possible, or use a proxy).
-  - [ ] Add user profiles and settings (e.g., preferred voice, theme overrides).
+  - [x] Replace mock `LoginPage` with real authentication (e.g., Firebase Auth, Supabase, or Clerk).
+  - [x] Secure API keys (ensure they are not exposed in client-side bundles if possible, or use a proxy).
+  - [x] Add user profiles and settings (e.g., preferred voice, theme overrides).
 
 - [x] **Testing & Quality Assurance**
   - [x] Set up Vitest or Jest for unit testing utility functions.
   - [x] Create component tests for `MessageItem`.
-  - [ ] Create component tests for `SystemVisualizer`.
+  - [x] Create component tests for `SystemVisualizer`.
 
 ## Phase 2: Zync AI Cores (New Architecture)
 
 - [x] **Neuro-Symbolic Fusion**
+
   - [x] Implement `Lattice` for knowledge graph mapping.
   - [x] Implement `NeuroSymbolicCore` for hybrid reasoning.
   - [x] Integrate reasoning trace into `App.tsx` and UI.
 
 - [x] **Persistent Topological Memory**
+
   - [x] Implement `TopologicalMemory` with `GhostBranch` support.
   - [x] Persist interactions to topological memory.
 
 - [x] **Counterfactual Persona Simulation**
+
   - [x] Implement `PersonaSimulator` with multiple personas.
   - [x] Connect Simulator to UI via Command Palette (`/simulate`).
 
@@ -42,6 +47,7 @@
 ## Phase 3: Optimization & Deployment
 
 - [ ] **Performance Optimization**
+
   - [ ] Optimize React re-renders in `SystemVisualizer` (use `requestAnimationFrame` or WebGL if needed).
   - [ ] Implement code splitting for heavy components.
   - [ ] Optimize asset loading (images, fonts).
