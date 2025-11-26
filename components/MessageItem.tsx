@@ -32,83 +32,6 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     }
   };
 
-  // Simple Markdown-like parser for formatting
-  const parseMarkdown = (text: string) => {
-    // 1. Handle Inline Code (`code`)
-    const codeParts = text.split(/(`[^`]+`)/g);
-    return codeParts.map((part, i) => {
-      if (part.startsWith('`') && part.endsWith('`')) {
-        return <code key={i} className="bg-black/30 px-1.5 py-0.5 rounded text-[0.9em] font-mono text-amber-200 border border-amber-500/20">{part.slice(1, -1)}</code>;
-      }
-      
-      // 2. Handle Bold (**text**)
-      const boldParts = part.split(/(\*\*.*?\*\*)/g);
-      return boldParts.map((subPart, j) => {
-        if (subPart.startsWith('**') && subPart.endsWith('**')) {
-           return <strong key={`${i}-${j}`} className={`font-bold ${isReflex ? 'text-cyan-200' : isMemory ? 'text-fuchsia-200' : isNeuro ? 'text-emerald-200' : 'text-slate-200'}`}>{subPart.slice(2, -2)}</strong>;
-        }
-
-        // 3. Handle Italic (*text*)
-        const italicParts = subPart.split(/(\*[^*]+\*)/g);
-        return italicParts.map((subSubPart, k) => {
-            if (subSubPart.startsWith('*') && subSubPart.endsWith('*')) {
-                return <em key={`${i}-${j}-${k}`} className="italic opacity-90">{subSubPart.slice(1, -1)}</em>;
-            }
-            return <span key={`${i}-${j}-${k}`}>{subSubPart}</span>;
-        });
-      });
-    });
-  };
-
-  const FormattedText = ({ text }: { text: string }) => {
-    if (!text) return null;
-    const lines = text.split('\n');
-    return (
-      <div className="space-y-1">
-        {lines.map((line, i) => {
-          const trimmed = line.trim();
-          
-          // Headers
-          if (line.startsWith('### ')) {
-            return <h3 key={i} className={`text-sm font-bold mt-3 mb-1 uppercase tracking-wide opacity-90 ${isReflex ? 'text-cyan-300' : isMemory ? 'text-fuchsia-300' : isNeuro ? 'text-emerald-300' : 'text-amber-300'}`}>{parseMarkdown(line.replace('### ', ''))}</h3>
-          }
-          if (line.startsWith('## ')) {
-             return <h2 key={i} className={`text-base font-bold mt-4 mb-2 ${isReflex ? 'text-cyan-100' : isMemory ? 'text-fuchsia-100' : isNeuro ? 'text-emerald-100' : 'text-amber-100'}`}>{parseMarkdown(line.replace('## ', ''))}</h2>
-          }
-          
-          // List Items
-          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-             const content = trimmed.substring(2);
-             return (
-                 <div key={i} className="flex gap-2 ml-1">
-                     <span className={`mt-1.5 w-1 h-1 rounded-full shrink-0 ${isReflex ? 'bg-cyan-500' : isMemory ? 'bg-fuchsia-500' : isNeuro ? 'bg-emerald-500' : 'bg-slate-500'}`}></span>
-                     <div className="leading-relaxed">{parseMarkdown(content)}</div>
-                 </div>
-             )
-          }
-
-          // Numbered Lists (Simple detection)
-          if (/^\d+\.\s/.test(trimmed)) {
-             const content = trimmed.replace(/^\d+\.\s/, '');
-             const number = trimmed.match(/^\d+/)?.[0];
-             return (
-                 <div key={i} className="flex gap-2 ml-1">
-                     <span className="font-mono opacity-70 shrink-0">{number}.</span>
-                     <div className="leading-relaxed">{parseMarkdown(content)}</div>
-                 </div>
-             )
-          }
-
-          // Empty lines
-          if (!trimmed) return <div key={i} className="h-2"></div>;
-
-          // Standard paragraph
-          return <div key={i} className="leading-relaxed">{parseMarkdown(line)}</div>
-        })}
-      </div>
-    );
-  };
-
   return (
     <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
       <div className={`flex max-w-[95%] md:max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-3 md:gap-4`}>
@@ -210,7 +133,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             {/* Content or Loading State */}
             {message.text ? (
                 <div className="selection:bg-cyan-500/30">
-                    <FormattedText text={message.text} />
+                    <FormattedText text={message.text} role={message.role} />
                 </div>
             ) : (
                 <div className="flex items-center gap-3 py-2 pl-1 select-none">
@@ -277,4 +200,89 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   );
 };
 
-export default MessageItem;
+export default React.memo(MessageItem);
+
+// Simple Markdown-like parser for formatting
+const parseMarkdown = (text: string, role: AIRole) => {
+  const isReflex = role === AIRole.REFLEX;
+  const isMemory = role === AIRole.MEMORY;
+  const isNeuro = role === AIRole.NEURO;
+
+  // 1. Handle Inline Code (`code`)
+  const codeParts = text.split(/(`[^`]+`)/g);
+  return codeParts.map((part, i) => {
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={i} className="bg-black/30 px-1.5 py-0.5 rounded text-[0.9em] font-mono text-amber-200 border border-amber-500/20">{part.slice(1, -1)}</code>;
+    }
+    
+    // 2. Handle Bold (**text**)
+    const boldParts = part.split(/(\*\*.*?\*\*)/g);
+    return boldParts.map((subPart, j) => {
+      if (subPart.startsWith('**') && subPart.endsWith('**')) {
+         return <strong key={`${i}-${j}`} className={`font-bold ${isReflex ? 'text-cyan-200' : isMemory ? 'text-fuchsia-200' : isNeuro ? 'text-emerald-200' : 'text-slate-200'}`}>{subPart.slice(2, -2)}</strong>;
+      }
+
+      // 3. Handle Italic (*text*)
+      const italicParts = subPart.split(/(\*[^*]+\*)/g);
+      return italicParts.map((subSubPart, k) => {
+          if (subSubPart.startsWith('*') && subSubPart.endsWith('*')) {
+              return <em key={`${i}-${j}-${k}`} className="italic opacity-90">{subSubPart.slice(1, -1)}</em>;
+          }
+          return <span key={`${i}-${j}-${k}`}>{subSubPart}</span>;
+      });
+    });
+  });
+};
+
+const FormattedText = ({ text, role }: { text: string, role: AIRole }) => {
+  if (!text) return null;
+  const isReflex = role === AIRole.REFLEX;
+  const isMemory = role === AIRole.MEMORY;
+  const isNeuro = role === AIRole.NEURO;
+  const isConsensus = role === AIRole.CONSENSUS; // Added for headers
+  const lines = text.split('\n');
+  return (
+    <div className="space-y-1">
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+        
+        // Headers
+        if (line.startsWith('### ')) {
+          return <h3 key={i} className={`text-sm font-bold mt-3 mb-1 uppercase tracking-wide opacity-90 ${isReflex ? 'text-cyan-300' : isMemory ? 'text-fuchsia-300' : isNeuro ? 'text-emerald-300' : 'text-amber-300'}`}>{parseMarkdown(line.replace('### ', ''), role)}</h3>
+        }
+        if (line.startsWith('## ')) {
+           return <h2 key={i} className={`text-base font-bold mt-4 mb-2 ${isReflex ? 'text-cyan-100' : isMemory ? 'text-fuchsia-100' : isNeuro ? 'text-emerald-100' : 'text-amber-100'}`}>{parseMarkdown(line.replace('## ', ''), role)}</h2>
+        }
+        
+        // List Items
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+           const content = trimmed.substring(2);
+           return (
+               <div key={i} className="flex gap-2 ml-1">
+                   <span className={`mt-1.5 w-1 h-1 rounded-full shrink-0 ${isReflex ? 'bg-cyan-500' : isMemory ? 'bg-fuchsia-500' : isNeuro ? 'bg-emerald-500' : 'bg-slate-500'}`}></span>
+                   <div className="leading-relaxed">{parseMarkdown(content, role)}</div>
+               </div>
+           )
+        }
+
+        // Numbered Lists (Simple detection)
+        if (/^\d+\.\s/.test(trimmed)) {
+           const content = trimmed.replace(/^\d+\.\s/, '');
+           const number = trimmed.match(/^\d+/)?.[0];
+           return (
+               <div key={i} className="flex gap-2 ml-1">
+                   <span className="font-mono opacity-70 shrink-0">{number}.</span>
+                   <div className="leading-relaxed">{parseMarkdown(content, role)}</div>
+               </div>
+           )
+        }
+
+        // Empty lines
+        if (!trimmed) return <div key={i} className="h-2"></div>;
+
+        // Standard paragraph
+        return <div key={i} className="leading-relaxed">{parseMarkdown(line, role)}</div>
+      })}
+    </div>
+  );
+};

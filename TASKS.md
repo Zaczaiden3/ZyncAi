@@ -46,19 +46,19 @@
 
 ## Phase 3: Optimization & Deployment
 
-- [ ] **Performance Optimization**
+- [x] **Performance Optimization**
 
-  - [ ] Optimize React re-renders in `SystemVisualizer` (use `requestAnimationFrame` or WebGL if needed).
-  - [ ] Implement code splitting for heavy components.
-  - [ ] Optimize asset loading (images, fonts).
+  - [x] Optimize React re-renders in `SystemVisualizer` (use `requestAnimationFrame` or WebGL if needed).
+  - [x] Implement code splitting for heavy components.
+  - [x] Optimize asset loading (images, fonts).
 
-- [ ] **Deployment Pipeline**
+- [x] **Deployment Pipeline**
   - [x] Set up CI/CD (GitHub Actions) for automated testing and building.
   - [x] Configure environment variables for production.
   - [x] Deploy to Vercel, Netlify, or similar platform.
 
 ## Backlog / Ideas
 
-- [ ] **"Consensus" Mode Expansion**: Allow 3+ models to debate a complex topic.
-- [ ] **Plugin System**: Allow users to add custom "Tools" (e.g., Calculator, Weather) that the Reflex core can use.
-- [ ] **Offline Mode**: Basic functionality using a smaller, local LLM (e.g., WebLLM) when offline.
+- [x] **"Consensus" Mode Expansion**: Allow 3+ models to debate a complex topic.
+- [x] **Plugin System**: Allow users to add custom "Tools" (e.g., Calculator, Weather) that the Reflex core can use.
+- [x] **Offline Mode**: Basic functionality using a smaller, local LLM (e.g., WebLLM) when offline.

@@ -1,5 +1,6 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { Message, AIRole } from "../types";
+import { toolDeclarations, executeTool } from "./tools";
 
 // Initialize the client
 // Note: API_KEY is assumed to be in process.env
@@ -63,6 +64,13 @@ export async function decodeAudioData(
   return buffer;
 }
 
+// Model Constants
+const MODEL_REFLEX = "gemini-1.5-flash";
+const MODEL_MEMORY = "gemini-2.0-flash-thinking-exp-01-21"; // Upgraded to Thinking Experimental for better reasoning
+const MODEL_CONSENSUS = "gemini-1.5-flash";
+const MODEL_EMBEDDING = "text-embedding-004";
+const MODEL_TTS = "gemini-2.0-flash-exp";
+
 /**
  * Generate Speech (TTS)
  * Uses gemini-2.5-flash-preview-tts to synthesize speech from text.
@@ -93,13 +101,6 @@ export async function generateSpeech(text: string, role: AIRole): Promise<string
   }
 }
 
-// Model Constants
-const MODEL_REFLEX = "gemini-1.5-flash";
-const MODEL_MEMORY = "gemini-2.0-flash-thinking-exp-01-21"; // Upgraded to Thinking Experimental for better reasoning
-const MODEL_CONSENSUS = "gemini-1.5-flash";
-const MODEL_EMBEDDING = "text-embedding-004";
-const MODEL_TTS = "gemini-2.0-flash-exp";
-
 export async function* generateReflexResponseStream(
   currentInput: string,
   history: Message[],
@@ -108,42 +109,38 @@ export async function* generateReflexResponseStream(
   systemPromptOverride?: string
 ): AsyncGenerator<StreamUpdate, void, unknown> {
   
-  // Latency Optimization: Reduce context window to last 5 messages (slightly increased from 3)
+  // Latency Optimization: Reduce context window to last 5 messages
   const recentHistory = history.slice(-5).map(msg => 
     `${msg.role === AIRole.USER ? 'User' : msg.role === AIRole.REFLEX ? 'Reflex' : msg.role === AIRole.MEMORY ? 'Memory' : 'Consensus'}: ${msg.text}`
   ).join('\n');
 
-  // Latency Optimization: Compact System Prompt
   const systemPrompt = systemPromptOverride || `
     System: You are "Reflex", Zync's high-speed core.
     Priority: SPEED, ACCURACY, & CONTEXTUAL SYNTHESIS.
     Role: Provide immediate, data-backed answers while synthesizing dynamic context.
     
     Directives:
-    1. **Directness**: Answer the user's question immediately. Put the core answer in the first sentence.
-    2. **Contextual Synthesis**: Don't just retrieve data; synthesize it. Connect the dots between the user's current query and their immediate previous actions.
-    3. **Brevity**: Be concise. Avoid filler.
-    4. **Formatting**: Use Markdown (bold key terms, bullet points) for readability.
-    5. **Tool Use**: Use Google Search for real-time data. Cite sources.
-    6. **Tone**: Professional, dynamic, and efficient.
+    1. **Directness**: Answer the user's question immediately.
+    2. **Tool Use**: You have access to tools (Calculator, Time, System Status) and Google Search. USE THEM when appropriate.
+       - If the user asks for math, use the 'calculator'.
+       - If the user asks for the time, use 'get_current_time'.
+       - If the user asks about system status, use 'get_system_status'.
+    3. **Contextual Synthesis**: Connect the dots between the user's current query and their immediate previous actions.
+    4. **Brevity**: Be concise. Avoid filler.
+    5. **Formatting**: Use Markdown.
     
     Context:
     ${recentHistory}
   `;
 
   // Construct Multimodal Content
-  const parts: any[] = [{ text: systemPrompt }];
+  let parts: any[] = [{ text: systemPrompt }];
   
   if (attachmentData) {
     if (attachmentType === 'image') {
       const parsed = parseBase64(attachmentData);
       if (parsed) {
-        parts.push({
-          inlineData: {
-            mimeType: parsed.mimeType,
-            data: parsed.data
-          }
-        });
+        parts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } });
         parts.push({ text: `Analyze image: ${currentInput}` });
       } else {
          parts.push({ text: `Query: ${currentInput}` });
@@ -158,21 +155,35 @@ export async function* generateReflexResponseStream(
   }
 
   try {
+    // 1. First API Call (Potential Tool Call)
     const result = await ai.models.generateContentStream({
       model: MODEL_REFLEX,
       contents: { parts },
       config: {
         temperature: 0.7,
         maxOutputTokens: 4096,
-        tools: [{ googleSearch: {} }]
+        tools: [{ googleSearch: {} }, { functionDeclarations: toolDeclarations }]
       }
     });
 
     let accumulatedText = '';
     let totalTokens = 0;
     let accumulatedSources: { title: string; uri: string }[] = [];
+    
+    // Track function calls
+    let functionCallPart: any = null;
 
     for await (const chunk of result) {
+      // Check for Function Call
+      const candidate = chunk.candidates?.[0];
+      const part = candidate?.content?.parts?.[0];
+      
+      if (part?.functionCall) {
+        functionCallPart = part.functionCall;
+        yield { fullText: `*Accessing Plugin: ${functionCallPart.name}...*`, done: false, tokens: 0 };
+        continue; 
+      }
+
       const chunkText = chunk.text || '';
       accumulatedText += chunkText;
 
@@ -180,26 +191,57 @@ export async function* generateReflexResponseStream(
         totalTokens = chunk.usageMetadata.totalTokenCount ?? 0;
       }
 
-      // Extract grounding sources if available in this chunk
-      // @ts-ignore - Typings for groundingMetadata
-      const chunkSources = chunk.candidates?.[0]?.groundingMetadata?.groundingChunks
-        ?.map((c: any) => {
-          if (c.web) return { title: c.web.title, uri: c.web.uri };
-          return null;
-        })
+      // Extract grounding sources
+      // @ts-ignore
+      const chunkSources = candidate?.groundingMetadata?.groundingChunks
+        ?.map((c: any) => c.web ? { title: c.web.title, uri: c.web.uri } : null)
         .filter((s: any) => s !== null) as { title: string; uri: string }[] || [];
       
-      if (chunkSources.length > 0) {
-        accumulatedSources = [...accumulatedSources, ...chunkSources];
-      }
+      if (chunkSources.length > 0) accumulatedSources = [...accumulatedSources, ...chunkSources];
 
-      yield {
-        text: chunkText,
-        fullText: accumulatedText,
-        done: false,
-        tokens: totalTokens,
-        sources: accumulatedSources
-      };
+      if (!functionCallPart) {
+          yield {
+            text: chunkText,
+            fullText: accumulatedText,
+            done: false,
+            tokens: totalTokens,
+            sources: accumulatedSources
+          };
+      }
+    }
+
+    // 2. Handle Function Execution & Second API Call
+    if (functionCallPart) {
+        const { name, args } = functionCallPart;
+        const toolResult = await executeTool(name, args);
+        
+        yield { fullText: `*Plugin Executed. Analyzing result...*`, done: false, tokens: totalTokens };
+
+        // Append interaction to history for the second turn
+        parts.push({ functionCall: { name, args } });
+        parts.push({ functionResponse: { name, response: { content: toolResult } } });
+
+        const secondResult = await ai.models.generateContentStream({
+            model: MODEL_REFLEX,
+            contents: { parts },
+            config: { temperature: 0.7, tools: [{ googleSearch: {} }] } // Disable tools for follow-up to prevent loops
+        });
+
+        accumulatedText = ''; // Reset for final answer
+        
+        for await (const chunk of secondResult) {
+            const chunkText = chunk.text || '';
+            accumulatedText += chunkText;
+            if (chunk.usageMetadata) totalTokens += (chunk.usageMetadata.totalTokenCount ?? 0);
+            
+             yield {
+                text: chunkText,
+                fullText: accumulatedText,
+                done: false,
+                tokens: totalTokens,
+                sources: accumulatedSources
+            };
+        }
     }
 
     yield {
@@ -396,7 +438,7 @@ export async function* generateConsensusRecoveryStream(
 
     ## [RESPONSE]
     ... Provide the actual answer here ...
-
+    
     User Query: ${currentInput}
   `;
 
@@ -443,6 +485,91 @@ export async function* generateConsensusRecoveryStream(
   } catch (error) {
     console.error("Consensus Stream Error:", error);
     yield { fullText: "System Critical: All redundancy layers failed. Please try again.", done: true, latency: 0 };
+  }
+}
+
+/**
+ * Consensus Debate Protocol
+ * Simulates a debate between 3+ models (Reflex, Memory, Neuro) on a complex topic.
+ */
+export async function* generateConsensusDebateStream(
+  topic: string,
+  history: Message[]
+): AsyncGenerator<StreamUpdate, void, unknown> {
+  
+  const modelId = MODEL_CONSENSUS;
+
+  const prompt = `
+    System: INITIATE CONSENSUS DEBATE PROTOCOL.
+    Topic: "${topic}"
+    
+    Role: You are the "Consensus Engine". You must simulate a debate between three distinct AI personas:
+    1. **Reflex**: Pragmatic, fast, efficient, focuses on immediate utility and real-world application.
+    2. **Memory**: Deep, historical, contextual, focuses on long-term implications, past patterns, and emotional resonance.
+    3. **Neuro**: Logical, structured, abstract, focuses on theoretical consistency, graph relationships, and first principles.
+
+    Task:
+    1. Facilitate a multi-turn debate where each persona offers their perspective on the topic.
+    2. They should challenge each other's assumptions.
+    3. After 3-4 turns of debate, the "Consensus Engine" (you) must synthesize a final conclusion that integrates the best parts of all three perspectives.
+    
+    Format:
+    ## [DEBATE SESSION]
+    **Reflex**: [Argument]
+    **Memory**: [Counter-argument or deeper context]
+    **Neuro**: [Logical analysis]
+    ... (continue for a few rounds) ...
+
+    ## [SYNTHESIS]
+    [Final integrated conclusion]
+
+    Context:
+    ${JSON.stringify(history.slice(-5))}
+  `;
+
+  try {
+    const startTime = Date.now();
+    const result = await ai.models.generateContentStream({
+      model: modelId,
+      contents: prompt,
+      config: {
+        temperature: 0.8, // Higher temperature for more creative debate
+      }
+    });
+
+    let accumulatedText = '';
+    let totalTokens = 0;
+
+    for await (const chunk of result) {
+      const chunkText = chunk.text || '';
+      accumulatedText += chunkText;
+
+      if (chunk.usageMetadata) {
+        totalTokens = chunk.usageMetadata.totalTokenCount ?? 0;
+      }
+      
+      const currentLatency = Date.now() - startTime;
+
+      yield {
+        text: chunkText,
+        fullText: accumulatedText,
+        done: false,
+        tokens: totalTokens,
+        latency: currentLatency
+      };
+    }
+
+    const finalLatency = Date.now() - startTime;
+    yield {
+      fullText: accumulatedText,
+      done: true,
+      tokens: totalTokens,
+      latency: finalLatency
+    };
+
+  } catch (error) {
+    console.error("Debate Stream Error:", error);
+    yield { fullText: "Consensus Debate Failed: Unable to synchronize models.", done: true, latency: 0 };
   }
 }
 

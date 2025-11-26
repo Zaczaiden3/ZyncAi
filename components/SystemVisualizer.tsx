@@ -451,7 +451,7 @@ const SystemVisualizer: React.FC<SystemVisualizerProps> = ({
   );
 };
 
-export default SystemVisualizer;
+export default React.memo(SystemVisualizer);
 
 const ReflexBar = ({ widthPercentage }: { widthPercentage: number }) => {
     const ref = React.useRef<HTMLDivElement>(null);

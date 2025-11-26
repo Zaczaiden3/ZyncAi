@@ -86,7 +86,7 @@ const LatticeVisualizer: React.FC<LatticeVisualizerProps> = ({ nodes, edges, isA
   );
 };
 
-export default LatticeVisualizer;
+export default React.memo(LatticeVisualizer);
 
 const LatticeEdgeItem: React.FC<{ start: { x: number, y: number, z: number }, end: { x: number, y: number, z: number } }> = ({ start, end }) => {
   const ref = useRef<HTMLDivElement>(null);

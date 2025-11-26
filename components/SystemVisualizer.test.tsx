@@ -9,7 +9,7 @@ vi.mock('recharts', () => {
   return {
     ...OriginalModule,
     ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
-      <div className="recharts-responsive-container" style={{ width: 800, height: 800 }}>
+      <div className="recharts-responsive-container w-[800px] h-[800px]">
         {children}
       </div>
     ),
@@ -36,6 +36,8 @@ describe('SystemVisualizer', () => {
     reflexConfidence: 85,
     memoryConfidence: 90,
     neuroConfidence: 88,
+    syncRate: 100,
+    activeMemoryNodes: 128,
   };
 
   it('renders without crashing', () => {
