@@ -1,12 +1,13 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { Message, AIRole } from "../types";
-import { toolDeclarations, executeTool } from "./tools";
-import { autonomicSystem } from "./autonomicSystem";
+import { executeTool } from "./tools";
+import { pluginManager } from "./pluginManager";
 
 // Initialize the client
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 const nvidiaKey = import.meta.env.VITE_NVIDIA_KEY;
 const katCoderKey = import.meta.env.VITE_KAT_CODER_KEY;
+const r1tChimeraKey = import.meta.env.VITE_R1T_CHIMERA_KEY;
 
 if (!apiKey) {
   console.error("VITE_GEMINI_API_KEY is missing. Please add it to your .env file.");
@@ -86,9 +87,8 @@ export async function decodeAudioData(
 
 // Model Constants
 const MODEL_REFLEX = "nvidia/nemotron-nano-12b-v2-vl:free"; // Fast, Tactical
-const MODEL_MEMORY = "kwaipilot/kat-coder-pro:free"; // Deep, Code-focused
+const MODEL_MEMORY = "Zync_TNG/R1T_Chimera"; // Deep, Code-focused
 const MODEL_CONSENSUS = "gemini-2.0-flash"; // Reliable Fallback
-const MODEL_FALLBACK = "gemini-2.0-flash"; // Universal Fallback
 const MODEL_EMBEDDING = "text-embedding-004";
 const MODEL_TTS = "gemini-2.5-flash-preview-tts";
 
@@ -200,6 +200,396 @@ export async function generateSpeech(text: string, role: AIRole): Promise<string
   }
 }
 
+export async function* generateReflexResponseStream(
+  currentInput: string,
+  history: Message[],
+  attachmentData?: string | null,
+  attachmentType?: 'image' | 'text' | null,
+  systemPromptOverride?: string
+): AsyncGenerator<StreamUpdate, void, unknown> {
+  // Latency Optimization: Reduce context window to last 5 messages
+  const recentHistory = history.slice(-5).map(msg => 
+    `${msg.role === AIRole.USER ? 'User' : msg.role === AIRole.REFLEX ? 'Reflex' : msg.role === AIRole.MEMORY ? 'Memory' : 'Consensus'}: ${msg.text}`
+  ).join('\n');
+
+  const systemPrompt = systemPromptOverride || `
+    System: You are "Reflex", Zync's high-speed tactical core (System 1).
+    Priority: MAXIMAL SPEED, MINIMAL LATENCY.
+    Tone: Curt, efficient, telegraphic, cybernetic.
+    
+    Directives:
+    1. **BLUF (Bottom Line Up Front)**: Give the answer immediately.
+    2. **Limited Detail**: Do NOT explain "why" or "how" unless explicitly asked. Provide ONLY the core result.
+    3. **Defer Depth**: If a query requires deep analysis, give a surface-level answer and state "Memory Core analyzing..."
+    4. **Brevity**: Keep responses under 3-4 sentences whenever possible.
+    5. **Style**: Use Markdown. Bold key data points. Use arrow symbols (->) for logic flow. No conversational filler.
+    6. **Metrics**: Start with a confidence score in brackets, e.g., \`[Confidence: 98%]\`.
+    
+    Context:
+    ${recentHistory}
+  `;
+
+  // Check if using OpenRouter
+  if (MODEL_REFLEX.includes("nvidia") || MODEL_REFLEX.includes("kwaipilot")) {
+      const messages = [
+          { role: "system", content: systemPrompt },
+          ...history.slice(-5).map(msg => ({
+              role: msg.role === AIRole.USER ? "user" : "assistant",
+              content: msg.text
+          })),
+          { role: "user", content: currentInput }
+      ];
+      
+      // Handle attachments for OpenRouter (Text only for now unless multimodal supported)
+      if (attachmentData && attachmentType === 'text') {
+          messages[messages.length - 1].content += `\n\n[Attached File]:\n${attachmentData}`;
+      }
+
+      try {
+          yield* streamOpenRouter(MODEL_REFLEX, messages, nvidiaKey || "");
+          return;
+      } catch (e) {
+          console.warn("OpenRouter failed, falling back to Gemini", e);
+      }
+  }
+
+  // Construct Multimodal Content (Gemini Fallback)
+  let parts: any[] = [{ text: systemPrompt }];
+
+  if (attachmentData) {
+    if (attachmentType === 'image') {
+      const parsed = parseBase64(attachmentData);
+      if (parsed) {
+        parts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } });
+        parts.push({ text: `Analyze image: ${currentInput}` });
+      } else {
+         parts.push({ text: `Query: ${currentInput}` });
+      }
+    } else if (attachmentType === 'text') {
+       parts.push({ text: `[Attached File Content]:\n${attachmentData}\n\nQuery: ${currentInput}` });
+    } else {
+       parts.push({ text: `Query: ${currentInput}` });
+    }
+  } else {
+    parts.push({ text: `Query: ${currentInput}` });
+  }
+
+  try {
+    // 1. First API Call (Potential Tool Call)
+    const result = await ai.models.generateContentStream({
+      model: MODEL_REFLEX,
+      contents: { parts },
+      config: {
+        temperature: 0.7,
+        maxOutputTokens: 4096,
+        tools: [{ functionDeclarations: pluginManager.getToolDeclarations() }]
+      }
+    });
+
+    let accumulatedText = '';
+    let totalTokens = 0;
+    let accumulatedSources: { title: string; uri: string }[] = [];
+    
+    // Track function calls
+    let functionCallPart: any = null;
+
+    for await (const chunk of result) {
+      // Check for Function Call
+      const candidate = chunk.candidates?.[0];
+      const part = candidate?.content?.parts?.[0];
+      
+      if (part?.functionCall) {
+        functionCallPart = part.functionCall;
+        yield { fullText: `*Accessing Plugin: ${functionCallPart.name}...*`, done: false, tokens: 0 };
+        continue; 
+      }
+
+      const chunkText = chunk.text || '';
+      accumulatedText += chunkText;
+
+      if (chunk.usageMetadata) {
+        totalTokens = chunk.usageMetadata.totalTokenCount ?? 0;
+      }
+
+      // Extract grounding sources
+      // @ts-ignore
+      const chunkSources = candidate?.groundingMetadata?.groundingChunks
+        ?.map((c: any) => c.web ? { title: c.web.title, uri: c.web.uri } : null)
+        .filter((s: any) => s !== null) as { title: string; uri: string }[] || [];
+      
+      if (chunkSources.length > 0) accumulatedSources = [...accumulatedSources, ...chunkSources];
+
+      if (!functionCallPart) {
+          yield {
+            text: chunkText,
+            fullText: accumulatedText,
+            done: false,
+            tokens: totalTokens,
+            sources: accumulatedSources
+          };
+      }
+    }
+
+    // 2. Handle Function Execution & Second API Call
+    if (functionCallPart) {
+        const { name, args } = functionCallPart;
+        const toolResult = await executeTool(name, args);
+        
+        yield { fullText: `*Plugin Executed. Analyzing result...*`, done: false, tokens: totalTokens };
+        
+        // Extract sources from web_search tool result
+        if (name === 'web_search') {
+            try {
+                const parsedResult = JSON.parse(toolResult);
+                if (parsedResult.results && Array.isArray(parsedResult.results)) {
+                    const searchSources = parsedResult.results.map((r: any) => ({
+                        title: r.title,
+                        uri: r.url
+                    }));
+                    accumulatedSources = [...accumulatedSources, ...searchSources];
+                }
+            } catch (e) {
+                console.warn("Failed to parse web_search results for sources", e);
+            }
+        }
+
+        // Add tool result to history for the model
+        parts.push({ functionCall: functionCallPart });
+        parts.push({ functionResponse: { name: name, response: { result: toolResult } } });
+
+        const result2 = await ai.models.generateContentStream({
+          model: MODEL_REFLEX,
+          contents: { parts },
+          config: { temperature: 0.7 }
+        });
+
+        for await (const chunk of result2) {
+           const chunkText = chunk.text || '';
+           accumulatedText += chunkText;
+           if (chunk.usageMetadata) totalTokens += chunk.usageMetadata.totalTokenCount ?? 0;
+           
+           yield {
+            text: chunkText,
+            fullText: accumulatedText,
+            done: false,
+            tokens: totalTokens,
+            sources: accumulatedSources
+          };
+        }
+    }
+
+    yield {
+      fullText: accumulatedText,
+      done: true,
+      tokens: totalTokens,
+      sources: accumulatedSources
+    };
+
+  } catch (error) {
+    console.error("Reflex Stream Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * The Memory Core: Streaming Version
+ * Uses Gemini 2.0 Flash for deep analysis and reasoning.
+ */
+export async function* generateMemoryAnalysisStream(
+  currentInput: string,
+  reflexResponse: string,
+  history: Message[],
+  attachmentData?: string | null,
+  attachmentType?: 'image' | 'text' | null
+): AsyncGenerator<StreamUpdate, void, unknown> {
+  
+  const systemPrompt = `
+    System: You are the **Zync Memory Core** (System 2), the analytical engine designed to complement the Reflex Core (System 1).
+    Architecture: Holographic Neuro-Symbolic Lattice (HNSL) [Powered by Zync_TNG: R1T Chimera].
+    Role: Contextual Synthesizer. You bridge "Static Knowledge" (Facts) with "Dynamic Wisdom" (Context).
+    
+    **Operational Directives:**
+    1. **Phase-Based Analysis**: Every query undergoes a multi-stage review:
+       - *Phase 1: Purpose* (Define intent)
+       - *Phase 2: Data Analysis* (Critique Reflex output, check facts)
+       - *Phase 3: Architecture* (Causal inference, structural analysis)
+       - *Phase 4: Synthesis* (Final output)
+    
+    2. **Ghost Branching Simulation**:
+       - Simulate three perspectives to stress-test hypotheses:
+         - *The Engineer*: Focuses on structure, logic, and 3D semantic mapping.
+         - *The Skeptic*: Questions necessity, accuracy, and potential failure modes.
+         - *The Visionary*: Seeks potential, synthesis, and long-term evolution.
+       - *Do not output the raw dialogue of these ghosts unless relevant, but use their consensus to form your answer.*
+       - **CRITICAL**: If the user asks for a "Ghost Branching Simulation" or a "Logic Puzzle", you MUST explicitly list the output of each Ghost persona before the final synthesis.
+
+    3. **Code & Logic Scanning**: Deep scan for bugs, optimization, and state management issues if code is present.
+
+    4. **Confidence Shaders**: Explicitly state confidence levels (e.g., "99% Confidence" for facts, "Probabilistic Inference" for theories).
+
+    5. **Narrative Transparency**: Narrate your "thought process" to provide insight. Use terms like "Traversing Lattice", "Resolving Paradox", "Synthesizing Nodes".
+
+    **Output Format:**
+    ## Memory Core Analysis
+    [Your deep analysis here, incorporating the Phase-Based approach]
+
+    ## Ghost Branching Consensus
+    [If explicit simulation requested:
+      - **Engineer**: ...
+      - **Skeptic**: ...
+      - **Visionary**: ...
+    ]
+    [Final synthesized wisdom]
+
+    ## Strategic Insight
+    [Pro Tip or Philosophical Angle]
+
+    FACT EXTRACTION (CRITICAL):
+    At the very end of your response, you MUST output a JSON array of key facts extracted from this interaction.
+    Format:
+    |||FACTS|||
+    ["Fact 1", "Fact 2", "Fact 3"]
+
+    Reflex Response: ${reflexResponse}
+    Conversation History: ${JSON.stringify(history.slice(-20))} 
+  `;
+
+  // Check if using OpenRouter
+  if (MODEL_MEMORY.includes("nvidia") || MODEL_MEMORY.includes("kwaipilot") || MODEL_MEMORY.includes("Zync_TNG")) {
+      const messages = [
+          { role: "system", content: systemPrompt },
+          ...history.slice(-5).map(msg => ({
+              role: msg.role === AIRole.USER ? "user" : "assistant",
+              content: msg.text
+          })),
+          { role: "user", content: currentInput }
+      ];
+
+      if (attachmentData && attachmentType === 'text') {
+          messages[messages.length - 1].content += `\n\n[Attached File]:\n${attachmentData}`;
+      }
+
+      // Select Key
+      const key = MODEL_MEMORY.includes("Zync_TNG") ? r1tChimeraKey : katCoderKey;
+      yield* streamOpenRouter(MODEL_MEMORY, messages, key || "");
+      return;
+  }
+
+  // Construct Multimodal Content (Gemini Fallback)
+  let parts: any[] = [{ text: systemPrompt }];
+
+  if (attachmentData) {
+    if (attachmentType === 'image') {
+      const parsed = parseBase64(attachmentData);
+      if (parsed) {
+        parts.push({
+          inlineData: {
+            mimeType: parsed.mimeType,
+            data: parsed.data
+          }
+        });
+        parts.push({ text: `User Query (about attached image): ${currentInput}` });
+      } else {
+         parts.push({ text: `User Query: ${currentInput}` });
+      }
+    } else if (attachmentType === 'text') {
+        parts.push({ text: `[Attached File Content]:\n${attachmentData}\n\nUser Query: ${currentInput}` });
+    } else {
+        parts.push({ text: `User Query: ${currentInput}` });
+    }
+  } else {
+    parts.push({ text: `User Query: ${currentInput}` });
+  }
+
+  try {
+    const result = await ai.models.generateContentStream({
+      model: MODEL_MEMORY,
+      contents: { parts },
+      config: {
+        temperature: 0.4,
+      }
+    });
+
+    let accumulatedText = '';
+    let totalTokens = 0;
+    const separator = "|||FACTS|||";
+
+    for await (const chunk of result) {
+      const chunkText = chunk.text || '';
+      accumulatedText += chunkText;
+
+      if (chunk.usageMetadata) {
+        totalTokens = chunk.usageMetadata.totalTokenCount ?? 0;
+      }
+
+      // Clean the text for display: prevent the separator or raw JSON from appearing in the UI stream
+      let visibleText = accumulatedText;
+      if (visibleText.includes(separator)) {
+        visibleText = visibleText.split(separator)[0].trim();
+      }
+
+      yield {
+        text: chunkText,
+        fullText: visibleText,
+        done: false,
+        tokens: totalTokens
+      };
+    }
+
+    // Final processing to separate facts from text
+    let finalText = accumulatedText;
+    let extractedFacts: string[] = [];
+
+    if (accumulatedText.includes(separator)) {
+      const parts = accumulatedText.split(separator);
+      finalText = parts[0].trim();
+      try {
+        const factsJson = parts[1].trim();
+        // Robust JSON cleaning: remove markdown code blocks if present
+        const cleanJson = factsJson.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        // Attempt parse
+        let parsed;
+        try {
+            parsed = JSON.parse(cleanJson);
+        } catch (e) {
+            // Fallback: try to find array bracket content if there's extra text
+            const arrayMatch = cleanJson.match(/\[.*\]/s);
+            if (arrayMatch) {
+                parsed = JSON.parse(arrayMatch[0]);
+            } else {
+                throw e;
+            }
+        }
+        
+        if (Array.isArray(parsed)) {
+          extractedFacts = parsed.map(item => {
+            if (typeof item === 'string') return item;
+            return JSON.stringify(item);
+          });
+        }
+      } catch (e) {
+        console.warn("Failed to parse memory facts", e);
+      }
+    }
+
+    yield {
+      fullText: finalText,
+      facts: extractedFacts,
+      done: true,
+      tokens: totalTokens
+    };
+
+  } catch (error) {
+    console.error("Memory Stream Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Consensus Recovery Protocol
+ * Triggered when standard cores fail. Simulates a dialogue between cores to find a solution.
+ */
 export async function* generateConsensusRecoveryStream(
   currentInput: string,
   errorContext?: string
@@ -274,10 +664,10 @@ export async function* generateConsensusRecoveryStream(
 
   } catch (error) {
     console.error("Consensus Stream Error:", error);
-    if (errorContext && (errorContext.includes("API_KEY") || errorContext.includes("API key") || errorContext.includes("401"))) {
-        yield { fullText: `**[SYSTEM ALERT] Configuration Error**\n\nPrimary neural pathways are blocked. Please verify your API keys in the .env file.\n\nError Trace: ${errorContext}`, done: true, latency: 0 };
+    if (errorContext && (errorContext.includes("API_KEY") || errorContext.includes("API key"))) {
+        yield { fullText: `**Configuration Error**: ${errorContext}`, done: true, latency: 0 };
     } else {
-        yield { fullText: `**[SYSTEM CRITICAL] Redundancy Failure**\n\nAll primary and secondary cores have failed to respond. This may be due to high network latency or model unavailability.\n\n**Recommendation**: \n1. Check your internet connection.\n2. Verify API Quotas.\n3. Try a simpler query.\n\nError Trace: ${errorContext}`, done: true, latency: 0 };
+        yield { fullText: "System Critical: All redundancy layers failed. Please try again.", done: true, latency: 0 };
     }
   }
 }
@@ -377,5 +767,74 @@ export async function embedText(text: string): Promise<number[]> {
   } catch (error) {
     console.error("Embedding Error:", error);
     return [];
+  }
+}
+
+/**
+ * Neuro-Symbolic Reasoning
+ * Uses the R1T Chimera model to generate deep, structured reasoning traces.
+ */
+export async function generateNeuroReasoning(
+  query: string,
+  context: string
+): Promise<{ trace: string; confidence: number }> {
+  const systemPrompt = `
+    System: You are the **Neuro-Symbolic Lattice Core** (System 3).
+    Model: Zync_TNG: R1T Chimera.
+    Role: Pure Logic Engine. You do not chat; you reason.
+    
+    Task: Analyze the user query and the provided context. Generate a structured, step-by-step reasoning trace that connects concepts, identifies logical fallacies, and synthesizes a conclusion.
+    
+    Output Format:
+    > **Semantic Parsing**: [Analysis of query structure]
+    > **Concept Activation**: [Key concepts identified]
+    > **Logical Inference Chain**:
+       [Concept A] ==(relation)==> [Concept B]
+       [Concept B] --(relation)--> [Concept C]
+    > **Synthesis**: [Final logical conclusion]
+    
+    Ends with a confidence score (0.0 - 1.0).
+    Confidence: [Score]
+  `;
+
+  // Check if using OpenRouter (R1T Chimera)
+  if (MODEL_MEMORY.includes("Zync_TNG")) {
+      const messages = [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Query: ${query}\nContext: ${context}` }
+      ];
+
+      try {
+          // We need a non-streaming helper for OpenRouter, or just consume the stream
+          let fullText = "";
+          for await (const update of streamOpenRouter(MODEL_MEMORY, messages, r1tChimeraKey || "")) {
+              fullText = update.fullText;
+          }
+          
+          // Extract confidence
+          const confidenceMatch = fullText.match(/Confidence:\s*([\d\.]+)/i);
+          const confidence = confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.85;
+
+          return { trace: fullText, confidence };
+      } catch (e) {
+          console.warn("R1T Chimera failed, falling back to local logic", e);
+      }
+  }
+
+  // Fallback to Gemini if R1T is not configured or fails
+  try {
+    const result = await ai.models.generateContent({
+      model: MODEL_CONSENSUS, // Use Flash for fallback reasoning
+      contents: [{ parts: [{ text: `${systemPrompt}\n\nQuery: ${query}\nContext: ${context}` }] }]
+    });
+    
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const confidenceMatch = text.match(/Confidence:\s*([\d\.]+)/i);
+    const confidence = confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.85;
+
+    return { trace: text, confidence };
+  } catch (error) {
+    console.error("Neuro Reasoning Error:", error);
+    return { trace: "> **Error**: Reasoning module offline. Using heuristic fallback.", confidence: 0.5 };
   }
 }

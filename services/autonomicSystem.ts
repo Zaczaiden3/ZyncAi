@@ -1,4 +1,4 @@
-import { ToolDefinition } from './tools';
+import { ToolDefinition } from '../types';
 
 export type AnomalyType = 'HIGH_LATENCY' | 'TOOL_FAILURE' | 'MEMORY_LEAK' | 'RENDER_FAILURE' | 'PROMPT_INJECTION';
 export type RemediationAction = 'RESTART_CORE' | 'FALLBACK_MODE' | 'DISABLE_TOOL' | 'ROLLBACK_CONFIG' | 'BLOCK_ACTION';

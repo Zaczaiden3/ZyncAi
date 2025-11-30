@@ -96,20 +96,42 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGlitch }) => {
   };
 
   // Mockup Testing Helper
-  const handleTestLogin = () => {
+  const handleTestLogin = async () => {
       // Switch to signin to keep it simple, or signup to test that flow
       if (mode === 'signup') {
           setFullName('TEST_OPERATOR');
           setAgreedToTerms(true);
       }
-      setEmail('test_user@zync.ai');
-      setPassword('dev_mode_active');
+      const testEmail = 'test_user@zync.ai';
+      const testPass = 'dev_mode_active';
       
-      // Visual delay to let user see the filled data before auto-submitting
-      setTimeout(() => {
-          const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-          handleSubmit(fakeEvent);
-      }, 600);
+      setEmail(testEmail);
+      setPassword(testPass);
+      
+      // Visual delay to let user see the filled data
+      await new Promise(r => setTimeout(r, 600));
+
+      if (status === 'PROCESSING') return;
+      
+      setStatus('PROCESSING');
+      setErrorMsg(null);
+
+      try {
+          const result = await loginUser(testEmail, testPass);
+
+          if (result.error) {
+              triggerFailure(`AUTH_FAILURE: ${result.error.toUpperCase()}`);
+          } else {
+              // Success Sequence
+              setStatus('SUCCESS');
+              setTimeout(() => {
+                  onLogin();
+              }, 800); 
+          }
+      } catch (err) {
+          triggerFailure("SYSTEM_ERROR: CONNECTION LOST");
+          console.error(err);
+      }
   };
 
   return (

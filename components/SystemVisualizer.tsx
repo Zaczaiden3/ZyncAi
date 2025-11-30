@@ -184,7 +184,7 @@ const SystemVisualizer: React.FC<SystemVisualizerProps> = ({
              Telemetry
           </h2>
           <div className="flex items-center gap-3">
-              <div className="text-[10px] text-slate-500 font-mono hidden md:block">V.2.5.2_STABLE</div>
+              <div className="text-[10px] text-slate-500 font-mono hidden md:block">V.2.6.0_CHIMERA</div>
               {onClose && (
                   <button onClick={onClose} aria-label="Close telemetry panel" className="md:hidden p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
                       <X size={18} />

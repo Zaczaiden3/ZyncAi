@@ -45,3 +45,11 @@ export interface MemoryNode {
   temporalWeight?: number; // 0-1, decays over time
   sentimentState?: 'positive' | 'neutral' | 'negative' | 'analytical';
 }
+
+import { FunctionDeclaration } from "@google/genai";
+
+export interface ToolDefinition {
+  name: string;
+  declaration: FunctionDeclaration;
+  execute: (args: any) => Promise<any> | any;
+}

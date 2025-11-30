@@ -57,7 +57,7 @@ const LatticeVisualizer: React.FC<LatticeVisualizerProps> = ({ nodes, edges, isA
   return (
     <div className="w-full h-64 relative overflow-hidden perspective-1000 bg-slate-950/50 rounded-xl border border-emerald-500/20">
       <div className="absolute top-2 left-2 text-[10px] font-mono text-emerald-500 uppercase tracking-wider z-10">
-        Neuro-Symbolic Lattice
+        Neuro-Symbolic Lattice (Zync_TNG: R1T Chimera)
       </div>
       
       <div 

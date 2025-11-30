@@ -1,6 +1,7 @@
 import { Lattice } from './Lattice';
 import { LatticeNode, LatticePath } from './types';
 import { memoryStore } from '../../services/vectorDb';
+import { generateNeuroReasoning } from '../../services/gemini';
 
 export class NeuroSymbolicCore {
   private lattice: Lattice;
@@ -75,74 +76,18 @@ export class NeuroSymbolicCore {
         dynamicNodes.forEach(n => subgraph.nodes.push(n));
     }
 
-    // 3. Generate Sophisticated Reasoning Trace
-    let reasoningTrace = "";
-    let totalConfidence = 0;
-    
-    reasoningTrace += `> **Semantic Parsing**: Extracted ${keywords.length} tokens.\n`;
-    reasoningTrace += `> **Memory Retrieval**: Found ${retrievedDocs.length} relevant facts in Vector Space.\n`;
+    // 3. Generate Sophisticated Reasoning Trace via R1T Chimera
+    const contextDescription = `
+      Active Concepts: ${subgraph.nodes.map(n => n.label).join(', ')}
+      Relationships: ${subgraph.edges.map(e => `${e.sourceId}->${e.targetId} (${e.relationType})`).join(', ')}
+      Retrieved Facts: ${retrievedDocs.map(d => d.content).join('; ')}
+    `;
 
-    if (subgraph.nodes.length > 0) {
-      const concepts = subgraph.nodes.map(n => `[${n.label}]`).join(' <-> ');
-      reasoningTrace += `> **Concept Activation**: ${concepts}\n`;
-      
-      reasoningTrace += `\n**Logical Inference Chain:**\n`;
-      let edgeCount = 0;
-      
-      // Connect Query Concepts to Retrieved Facts
-      const allEdges = [...subgraph.edges];
-      
-      // Heuristic: Connect query terms to retrieved facts if they share semantic similarity (simulated here by proximity in list)
-      if (retrievedDocs.length > 0) {
-          keywords.forEach((k, i) => {
-             allEdges.push({
-                 sourceId: `dyn-${i}`,
-                 targetId: `rag-0`, // Connect to top result
-                 relationType: 'supported_by',
-                 weight: 0.85
-             });
-          });
-      }
-
-      allEdges.forEach(edge => {
-        const source = subgraph.nodes.find(n => n.id === edge.sourceId) || dynamicNodes.find(n => n.id === edge.sourceId);
-        const target = subgraph.nodes.find(n => n.id === edge.targetId) || dynamicNodes.find(n => n.id === edge.targetId);
-        
-        if (source && target && edgeCount < 8) {
-            const symbol = edge.weight > 0.8 ? '==>' : '-->';
-            reasoningTrace += `   ${source.label} ${symbol} ${edge.relationType.toUpperCase()} ${symbol} ${target.label} (φ=${edge.weight.toFixed(2)})\n`;
-            edgeCount++;
-        }
-      });
-
-      if (edgeCount === 0) {
-          reasoningTrace += `   ${dynamicNodes[0]?.label || 'Query'} --> ANALYZING_RELATIONS --> ${dynamicNodes[1]?.label || 'Context'} (φ=0.65)\n`;
-      }
-
-      // Confidence calculation
-      totalConfidence = subgraph.nodes.reduce((acc, n) => acc + n.confidence, 0) / subgraph.nodes.length;
-    } else {
-      reasoningTrace += "> **Symbolic Grounding**: Weak. Initiating Neural Hallucination Protocol for hypothesis generation.\n";
-      totalConfidence = 0.5; 
-    }
-
-    reasoningTrace += `\n> **Synthesis**: Logic gates stabilized. Confidence: ${(totalConfidence * 100).toFixed(1)}%`;
-
-    // 4. Generate Strategic Advice for Other Cores
-    let strategicAdvice = "";
-    if (totalConfidence > 0.85) {
-        strategicAdvice = "**Core Recommendation**: High certainty detected. \n- **Reflex**: Execute immediately. \n- **Memory**: Store result as fact. \n- **Consensus**: Standby.";
-    } else if (totalConfidence > 0.6) {
-        strategicAdvice = "**Core Recommendation**: Moderate complexity. \n- **Reflex**: Provide summary. \n- **Memory**: Perform deep validation scan. \n- **Consensus**: Monitor for drift.";
-    } else {
-        strategicAdvice = "**Core Recommendation**: Low symbolic grounding. \n- **Reflex**: Defer to Memory. \n- **Memory**: Initiate full historical synthesis. \n- **Consensus**: PREPARE INTERVENTION.";
-    }
-
-    reasoningTrace += `\n\n${strategicAdvice}`;
+    const neuroResult = await generateNeuroReasoning(query, contextDescription);
 
     return {
-      reasoningTrace,
-      confidence: totalConfidence,
+      reasoningTrace: neuroResult.trace,
+      confidence: neuroResult.confidence,
       graph: subgraph
     };
   }

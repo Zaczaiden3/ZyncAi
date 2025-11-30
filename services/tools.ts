@@ -1,4 +1,7 @@
 import { FunctionDeclaration } from "@google/genai";
+import { ToolDefinition } from "../types";
+import { pluginManager } from "./pluginManager";
+import { autonomicSystem } from "./autonomicSystem";
 
 // Define SchemaType locally as a helper object
 const SchemaType = {
@@ -9,12 +12,6 @@ const SchemaType = {
   ARRAY: "ARRAY",
   OBJECT: "OBJECT"
 };
-
-export interface ToolDefinition {
-  name: string;
-  declaration: FunctionDeclaration;
-  execute: (args: any) => Promise<any> | any;
-}
 
 // --- Tool Implementations ---
 
@@ -173,16 +170,27 @@ export const webSearchTool: ToolDefinition = {
 
 // --- Registry ---
 
-export const availableTools: ToolDefinition[] = [
+const defaultTools: ToolDefinition[] = [
   calculatorTool,
   timeTool,
   systemStatusTool,
   webSearchTool,
 ];
 
-export const toolDeclarations = availableTools.map(t => t.declaration);
-
-import { autonomicSystem } from "./autonomicSystem";
+// Register default tools
+defaultTools.forEach(tool => {
+  pluginManager.register({
+    definition: tool,
+    metadata: {
+      id: tool.name,
+      name: tool.name,
+      description: tool.declaration.description || "",
+      version: "1.0.0",
+      author: "System",
+      enabled: true
+    }
+  });
+});
 
 export const executeTool = async (name: string, args: any) => {
   // Self-Protection: Check Policy
@@ -190,9 +198,9 @@ export const executeTool = async (name: string, args: any) => {
     return JSON.stringify({ error: `Policy Violation: Execution of tool '${name}' is blocked by the Autonomic Nervous System.` });
   }
 
-  const tool = availableTools.find(t => t.name === name);
+  const tool = pluginManager.getActiveTools().find(t => t.name === name);
   if (!tool) {
-    return JSON.stringify({ error: `Tool ${name} not found.` });
+    return JSON.stringify({ error: `Tool ${name} not found or disabled.` });
   }
   try {
     const result = await tool.execute(args);

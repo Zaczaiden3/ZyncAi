@@ -13,10 +13,11 @@ export const initializeOfflineModel = async (
   onProgress: (progress: string) => void
 ): Promise<void> => {
   if (engine) return;
-  if (isInitializing) {
-      // If already initializing, we might want to wait or just return. 
-      // For simplicity, we'll assume the UI handles preventing double-init.
-      return;
+  if (isInitializing) return;
+
+  // Check for WebGPU support
+  if (!(navigator as any).gpu) {
+    throw new Error("WebGPU is not supported in this browser. Offline mode requires a WebGPU-compatible browser (e.g., Chrome, Edge).");
   }
 
   isInitializing = true;
@@ -31,8 +32,8 @@ export const initializeOfflineModel = async (
     );
     console.log("Offline Model Initialized");
   } catch (error) {
-    console.error("Failed to initialize offline model", error);
-    throw error;
+    console.error("Failed to initialize offline model:", error);
+    throw new Error(`Failed to load offline model: ${error instanceof Error ? error.message : String(error)}`);
   } finally {
     isInitializing = false;
   }

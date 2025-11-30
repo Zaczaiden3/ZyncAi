@@ -16,6 +16,7 @@ import { topologicalMemory } from './cores/memory/TopologicalMemory';
 import { personaSimulator } from './cores/simulation/PersonaSimulator';
 import { sessionManager, ChatSession } from './services/sessionManager';
 import { subscribeToAuthChanges, logoutUser } from './services/auth';
+import { pluginManager } from './services/pluginManager';
 
 // Lazy Load Heavy Components for Performance Optimization
 const SystemVisualizer = React.lazy(() => import('./components/SystemVisualizer'));
@@ -496,7 +497,7 @@ function App() {
         setMessages(prev => [...prev, {
             id: simStartId,
             role: AIRole.NEURO,
-            text: `**Neuro-Symbolic Lattice Activated**\n*Reasoning in progress...*`,
+            text: `**Neuro-Symbolic Lattice Activated (Zync_TNG: R1T Chimera)**\n*Reasoning in progress...*`,
             timestamp: Date.now(),
             metrics: { latency: 0, tokens: 0, confidence: 0 }
         }]);
@@ -507,7 +508,7 @@ function App() {
 
         setMessages(prev => prev.map(m => m.id === simStartId ? {
             ...m,
-            text: `**Neuro-Symbolic Lattice Activated**\n${reasoning.reasoningTrace}\n\n**Counterfactual Simulation Protocol**\nQuery: "${query}"\nSpawning ${personas.length} divergent persona threads...`,
+            text: `**Neuro-Symbolic Lattice Activated (Zync_TNG: R1T Chimera)**\n${reasoning.reasoningTrace}\n\n**Counterfactual Simulation Protocol**\nQuery: "${query}"\nSpawning ${personas.length} divergent persona threads...`,
             metrics: { latency: 15, tokens: 30, confidence: reasoning.confidence * 100 }
         } : m));
     } catch (error) {
@@ -687,7 +688,7 @@ function App() {
           setMessages(prev => [...prev, {
               id: `neuro-${Date.now()}`,
               role: AIRole.NEURO,
-              text: `**Neuro-Symbolic Lattice Activated**\n${reasoning.reasoningTrace}`,
+              text: `**Neuro-Symbolic Lattice Activated (Zync_TNG: R1T Chimera)**\n${reasoning.reasoningTrace}`,
               timestamp: Date.now(),
               metrics: { latency: 15, tokens: 25, confidence: reasoning.confidence * 100 }
           }]);
@@ -974,19 +975,68 @@ function App() {
       label: isOfflineMode ? 'Go Online (Cloud)' : 'Go Offline (Local)',
       description: isOfflineMode ? 'Switch to Cloud AI for max intelligence.' : 'Switch to Local LLM for privacy.',
       icon: <Lock size={18} />,
-      action: () => {
-        setIsOfflineMode(!isOfflineMode);
+      action: async () => {
+        const newMode = !isOfflineMode;
+        setIsOfflineMode(newMode);
         setIsPaletteOpen(false);
+        
+        if (newMode) {
+            // Pre-initialize offline model
+            try {
+                const { initializeOfflineModel, isOfflineModelReady } = await import('./services/offlineAi');
+                if (!isOfflineModelReady()) {
+                    setOfflineProgress("Initializing...");
+                    await initializeOfflineModel((progress) => {
+                        setOfflineProgress(progress);
+                    });
+                    setOfflineProgress(null);
+                }
+            } catch (e) {
+                console.error("Failed to init offline model", e);
+                setMessages(prev => [...prev, {
+                    id: `sys-err-${Date.now()}`,
+                    role: AIRole.REFLEX,
+                    text: `**Offline Mode Error**: ${e instanceof Error ? e.message : String(e)}`,
+                    timestamp: Date.now(),
+                    metrics: { latency: 0, tokens: 0, confidence: 0 }
+                }]);
+                setIsOfflineMode(false); // Revert
+                return;
+            }
+        }
+
         setMessages(prev => [...prev, {
             id: `sys-mode-${Date.now()}`,
             role: AIRole.REFLEX,
-            text: `**System Mode Switched**\nNow using: ${!isOfflineMode ? 'OFFLINE (Local LLM)' : 'ONLINE (Cloud AI)'}`,
+            text: `**System Mode Switched**\nNow using: ${newMode ? 'OFFLINE (Local LLM)' : 'ONLINE (Cloud AI)'}`,
             timestamp: Date.now(),
             metrics: { latency: 0, tokens: 0, confidence: 100 }
         }]);
       },
       category: 'System',
       previewVideo: 'https://assets.mixkit.co/videos/preview/mixkit-server-room-with-blue-lights-208-large.mp4'
+    },
+    {
+      id: 'manage-plugins',
+      label: 'Manage Plugins',
+      description: 'View and toggle active system plugins.',
+      icon: <Layers size={18} />,
+      action: () => {
+        const plugins = pluginManager.getAllPlugins();
+        const statusMsg = plugins.map(p => 
+          `- **${p.definition.name}** (${p.metadata.version}): ${p.metadata.enabled ? '✅ Active' : '❌ Disabled'}`
+        ).join('\n');
+        
+        setMessages(prev => [...prev, {
+          id: crypto.randomUUID(),
+          role: AIRole.REFLEX,
+          text: `### System Plugins\n\n${statusMsg}`,
+          timestamp: Date.now(),
+          sentiment: 'analytical'
+        }]);
+        setIsPaletteOpen(false);
+      },
+      category: 'System'
     },
     {
       id: 'system-reset',
@@ -1146,8 +1196,12 @@ function App() {
                    <Terminal size={14} className="hidden sm:block" />
                    <span className="hidden sm:inline">STATUS</span>
                 </div>
-                <span className="text-xs md:text-lg font-bold font-mono text-emerald-500 flex items-center gap-2">
-                    ONLINE <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                <span className={`text-xs md:text-lg font-bold font-mono ${isOfflineMode ? 'text-amber-500' : 'text-emerald-500'} flex items-center gap-2`}>
+                    {isOfflineMode ? 'OFFLINE' : 'ONLINE'} 
+                    <span className="relative flex h-2 w-2">
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isOfflineMode ? 'bg-amber-400' : 'bg-emerald-400'} opacity-75`}></span>
+                        <span className={`relative inline-flex rounded-full h-2 w-2 ${isOfflineMode ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                    </span>
                 </span>
              </div>
           </div>

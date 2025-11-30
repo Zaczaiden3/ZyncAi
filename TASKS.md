@@ -85,5 +85,11 @@
   - [x] Visualize this "dreaming" process in the `SystemVisualizer`.
 
 - [x] **External Knowledge Integration**
+
   - [x] Connect `Reflex` core to a real web search API (e.g., Tavily, Serper) for up-to-date information.
   - [x] Display citations and sources in the UI.
+
+- [x] **Offline Mode Implementation**
+  - [x] Integrate `@mlc-ai/web-llm` for local inference.
+  - [x] Add UI toggle and status indicators.
+  - [x] Verify offline model initialization and response generation.
