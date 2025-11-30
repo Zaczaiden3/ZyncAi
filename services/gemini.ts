@@ -4,6 +4,9 @@ import { toolDeclarations, executeTool } from "./tools";
 
 // Initialize the client
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const nvidiaKey = import.meta.env.VITE_NVIDIA_KEY;
+const katCoderKey = import.meta.env.VITE_KAT_CODER_KEY;
+
 if (!apiKey) {
   console.error("VITE_GEMINI_API_KEY is missing. Please add it to your .env file.");
 }
@@ -68,11 +71,89 @@ export async function decodeAudioData(
 }
 
 // Model Constants
-const MODEL_REFLEX = "gemini-2.0-flash";
-const MODEL_MEMORY = "gemini-2.0-flash"; // Switched to Flash for stability
-const MODEL_CONSENSUS = "gemini-2.0-flash";
+const MODEL_REFLEX = "nvidia/nemotron-nano-12b-v2-vl:free"; // Fast, Tactical
+const MODEL_MEMORY = "kwaipilot/kat-coder-pro:free"; // Deep, Code-focused
+const MODEL_CONSENSUS = "gemini-2.0-flash"; // Reliable Fallback
 const MODEL_EMBEDDING = "text-embedding-004";
 const MODEL_TTS = "gemini-2.5-flash-preview-tts";
+
+/**
+ * OpenRouter Streaming Helper
+ */
+async function* streamOpenRouter(
+  model: string,
+  messages: any[],
+  apiKey: string
+): AsyncGenerator<StreamUpdate, void, unknown> {
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:5173", // Update with actual domain in prod
+        "X-Title": "Zync AI"
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: messages,
+        stream: true
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenRouter API Error: ${response.statusText}`);
+    }
+
+    if (!response.body) throw new Error("No response body");
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let accumulatedText = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.trim() === "") continue;
+        if (line.trim() === "data: [DONE]") return;
+
+        if (line.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            const content = data.choices[0]?.delta?.content || "";
+            accumulatedText += content;
+            
+            yield {
+              text: content,
+              fullText: accumulatedText,
+              done: false,
+              tokens: 0 // OpenRouter doesn't always send token counts in stream
+            };
+          } catch (e) {
+            console.warn("Error parsing OpenRouter stream chunk", e);
+          }
+        }
+      }
+    }
+
+    yield {
+      fullText: accumulatedText,
+      done: true,
+      tokens: 0
+    };
+
+  } catch (error) {
+    console.error("OpenRouter Stream Error:", error);
+    throw error;
+  }
+}
 
 /**
  * Generate Speech (TTS)
@@ -133,7 +214,29 @@ export async function* generateReflexResponseStream(
     ${recentHistory}
   `;
 
-  // Construct Multimodal Content
+  // Check if using OpenRouter
+  if (MODEL_REFLEX.includes("nvidia") || MODEL_REFLEX.includes("kwaipilot")) {
+      const messages = [
+          { role: "system", content: systemPrompt },
+          ...history.slice(-5).map(msg => ({
+              role: msg.role === AIRole.USER ? "user" : "assistant",
+              content: msg.text
+          })),
+          { role: "user", content: currentInput }
+      ];
+      
+      // Handle attachments for OpenRouter (Text only for now unless multimodal supported)
+      if (attachmentData && attachmentType === 'text') {
+          messages[messages.length - 1].content += `\n\n[Attached File]:\n${attachmentData}`;
+      }
+      // Note: Image attachments for OpenRouter require specific handling (URL or base64 in content array). 
+      // For simplicity, we'll skip image attachment for OpenRouter in this iteration or assume text-only.
+
+      yield* streamOpenRouter(MODEL_REFLEX, messages, nvidiaKey || "");
+      return;
+  }
+
+  // Construct Multimodal Content (Gemini Fallback)
   let parts: any[] = [{ text: systemPrompt }];
 
   if (attachmentData) {
@@ -318,7 +421,27 @@ export async function* generateMemoryAnalysisStream(
     Conversation History: ${JSON.stringify(history.slice(-20))} 
   `;
 
-  // Construct Multimodal Content
+  // Check if using OpenRouter
+  if (MODEL_MEMORY.includes("nvidia") || MODEL_MEMORY.includes("kwaipilot")) {
+      const messages = [
+          { role: "system", content: systemPrompt },
+          ...history.slice(-5).map(msg => ({
+              role: msg.role === AIRole.USER ? "user" : "assistant",
+              content: msg.text
+          })),
+          { role: "user", content: currentInput }
+      ];
+
+      if (attachmentData && attachmentType === 'text') {
+          messages[messages.length - 1].content += `\n\n[Attached File]:\n${attachmentData}`;
+      }
+
+      // Use Kat Coder Key for Memory
+      yield* streamOpenRouter(MODEL_MEMORY, messages, katCoderKey || "");
+      return;
+  }
+
+  // Construct Multimodal Content (Gemini Fallback)
   let parts: any[] = [{ text: systemPrompt }];
 
   if (attachmentData) {
