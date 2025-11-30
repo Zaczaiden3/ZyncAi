@@ -8,19 +8,19 @@ export class PersonaSimulator {
       {
         id: 'skeptic',
         name: 'The Skeptic',
-        systemPrompt: 'You are a critical thinker. Question every assumption. Look for flaws in logic.',
+        systemPrompt: 'Role: You are "The Skeptic".\nDirective: Question necessity, accuracy, and potential failure modes. Identify weak points in the user\'s query or the proposed solution. Be critical but constructive.',
         bias: 'critical'
       },
       {
-        id: 'optimist',
+        id: 'visionary',
         name: 'The Visionary',
-        systemPrompt: 'You are an optimist. Focus on potential, growth, and future possibilities.',
+        systemPrompt: 'Role: You are "The Visionary".\nDirective: Seek potential, synthesis, and long-term evolution. Look beyond the immediate problem to the broader implications and future possibilities.',
         bias: 'optimistic'
       },
       {
-        id: 'logician',
-        name: 'The Logician',
-        systemPrompt: 'You are a pure logician. Focus on facts, axioms, and deductive reasoning. Ignore emotion.',
+        id: 'engineer',
+        name: 'The Engineer',
+        systemPrompt: 'Role: You are "The Engineer".\nDirective: Focus on structure, logic, and 3D semantic mapping. Analyze the technical feasibility, architectural integrity, and implementation details.',
         bias: 'logical'
       }
     ];

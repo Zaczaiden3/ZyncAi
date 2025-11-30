@@ -33,7 +33,10 @@ export default defineConfig(({ mode }) => {
                   return 'recharts';
                 }
                 if (id.includes('lucide-react')) {
-                  return 'lucide';
+                  return 'ui-vendor';
+                }
+                if (id.includes('firebase')) {
+                  return 'firebase';
                 }
                 if (id.includes('pdfjs-dist')) {
                   return 'pdfjs';
@@ -43,6 +46,9 @@ export default defineConfig(({ mode }) => {
                 }
                 if (id.includes('@mlc-ai/web-llm')) {
                   return 'web-llm';
+                }
+                if (id.includes('idb') || id.includes('voy-search') || id.includes('@openrouter/sdk')) {
+                  return 'utils-vendor';
                 }
                 return 'vendor';
               }

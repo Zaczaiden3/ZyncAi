@@ -97,16 +97,24 @@ const LatticeEdgeItem: React.FC<{ start: { x: number, y: number, z: number }, en
       const dy = end.y - start.y;
       const dz = end.z - start.z;
       const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      
+      // Midpoint
       const mx = (start.x + end.x) / 2;
       const my = (start.y + end.y) / 2;
       const mz = (start.z + end.z) / 2;
 
-      ref.current.style.setProperty('--edge-width', `${length}px`);
-      ref.current.style.setProperty('--edge-transform', `translate3d(${mx}px, ${my}px, ${mz}px) rotateY(${Math.atan2(dz, dx)}rad) rotateZ(${Math.atan2(dy, dx)}rad) translate(-50%, -50%)`);
+      // Rotation (Euler Angles)
+      // This is an approximation for CSS 3D. True 3D lines in CSS are tricky.
+      // We rotate around Z to align with the 2D projection, then Y for depth.
+      const rotZ = Math.atan2(dy, dx) * (180 / Math.PI);
+      const rotY = Math.atan2(dz, Math.sqrt(dx * dx + dy * dy)) * (180 / Math.PI);
+
+      ref.current.style.width = `${length}px`;
+      ref.current.style.transform = `translate3d(${mx}px, ${my}px, ${mz}px) rotateZ(${rotZ}deg) rotateY(${-rotY}deg) translate(-50%, -50%)`;
     }
   }, [start, end]);
 
-  return <div ref={ref} className="lattice-edge absolute bg-emerald-500/30 h-[1px] transform-gpu w-[var(--edge-width)]" />;
+  return <div ref={ref} className="lattice-edge absolute bg-emerald-500/30 h-[1px] transform-gpu origin-center" />;
 };
 
 const LatticeNodeItem: React.FC<{ node: LatticeNode, pos: { x: number, y: number, z: number } }> = ({ node, pos }) => {

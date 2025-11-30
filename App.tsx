@@ -7,7 +7,7 @@ import DataStreamBackground from './components/DataStreamBackground';
 import VoiceInput from './components/VoiceInput';
 
 import { memoryStore } from './services/vectorDb';
-import { Send, Activity, Terminal, Command, Menu, ArrowDown, Paperclip, ImageIcon, Trash2, RefreshCw, Download, Lock, Network, Users, Plus, FileJson, Layers } from 'lucide-react';
+import { Send, Activity, Terminal, Command, Menu, ArrowDown, Paperclip, ImageIcon, Trash2, RefreshCw, Download, Lock, Network, Users, Plus, FileJson, Layers, Edit3 } from 'lucide-react';
 import { neuroSymbolicCore } from './cores/neuro-symbolic/NeuroSymbolicCore';
 import { LatticeNode, LatticeEdge } from './cores/neuro-symbolic/types';
 import { topologicalMemory } from './cores/memory/TopologicalMemory';
@@ -452,17 +452,32 @@ export default function App() {
     setIsPaletteOpen(false);
 
     // Neuro-Symbolic Analysis
-    const reasoning = neuroSymbolicCore.reason(query);
-    setNeuroTrace(reasoning.reasoningTrace);
-    setActiveLattice({ nodes: reasoning.graph.nodes, edges: reasoning.graph.edges });
+    try {
+        setSystemStats(prev => ({ ...prev, currentTask: 'NEURO_ANALYSIS' }));
+        
+        // Optimistic UI: Show we are thinking
+        const simStartId = `sim-start-${Date.now()}`;
+        setMessages(prev => [...prev, {
+            id: simStartId,
+            role: AIRole.NEURO,
+            text: `**Neuro-Symbolic Lattice Activated**\n*Reasoning in progress...*`,
+            timestamp: Date.now(),
+            metrics: { latency: 0, tokens: 0, confidence: 0 }
+        }]);
 
-    setMessages(prev => [...prev, {
-        id: `sim-start-${Date.now()}`,
-        role: AIRole.NEURO,
-        text: `**Neuro-Symbolic Lattice Activated**\n${reasoning.reasoningTrace}\n\n**Counterfactual Simulation Protocol**\nQuery: "${query}"\nSpawning ${personas.length} divergent persona threads...`,
-        timestamp: Date.now(),
-        metrics: { latency: 15, tokens: 30, confidence: reasoning.confidence * 100 }
-    }]);
+        const reasoning = await neuroSymbolicCore.reason(query);
+        setNeuroTrace(reasoning.reasoningTrace);
+        setActiveLattice({ nodes: reasoning.graph.nodes, edges: reasoning.graph.edges });
+
+        setMessages(prev => prev.map(m => m.id === simStartId ? {
+            ...m,
+            text: `**Neuro-Symbolic Lattice Activated**\n${reasoning.reasoningTrace}\n\n**Counterfactual Simulation Protocol**\nQuery: "${query}"\nSpawning ${personas.length} divergent persona threads...`,
+            metrics: { latency: 15, tokens: 30, confidence: reasoning.confidence * 100 }
+        } : m));
+    } catch (error) {
+        console.error("Simulation Error:", error);
+        return;
+    }
 
     for (const persona of personas) {
         const msgId = `sim-${persona.id}-${Date.now()}`;
@@ -623,7 +638,11 @@ export default function App() {
 
     try {
       // --- NEURO-SYMBOLIC CORE PHASE ---
-      const reasoning = neuroSymbolicCore.reason(userText);
+      setSystemStats(prev => ({ ...prev, currentTask: 'NEURO_REASONING' }));
+      
+      // Real RAG & Reasoning (Async)
+      const reasoning = await neuroSymbolicCore.reason(userText);
+      
       setNeuroTrace(reasoning.reasoningTrace);
       setSystemStats(prev => ({ ...prev, neuroConfidence: reasoning.confidence * 100 }));
       setActiveLattice({ nodes: reasoning.graph.nodes, edges: reasoning.graph.edges });
@@ -751,8 +770,8 @@ export default function App() {
         // Memory Storage
         if (userText.length > 10) {
             await memoryStore.add(`User: ${userText}\nAI: ${reflexFullResponse}`);
-            const memId = topologicalMemory.addMemory(userText, undefined, 1.0);
-            topologicalMemory.addMemory(reflexFullResponse, memId, systemStats.reflexConfidence / 100);
+            const memId = await topologicalMemory.addMemory(userText, undefined, 1.0);
+            await topologicalMemory.addMemory(reflexFullResponse, memId, systemStats.reflexConfidence / 100);
         }
         
         setSystemStats(prev => ({ ...prev, currentTask: 'DEPLOYMENT_COMPLETE' }));
@@ -828,36 +847,47 @@ export default function App() {
     }
   };
 
+  const handleRenameSession = () => {
+    const newName = prompt('Enter new session name:', currentSession.name);
+    if (newName && newName.trim()) {
+        sessionManager.updateSession(currentSession.id, { name: newName.trim() });
+        setCurrentSession(prev => ({ ...prev, name: newName.trim() }));
+        setSessions(sessionManager.getSessions());
+    }
+  };
+
   const commands: CommandOption[] = useMemo(() => [
+    // --- Session Management ---
     {
       id: 'new-session',
       label: 'New Session',
-      description: 'Create a fresh chat session',
+      description: 'Create a fresh workspace. (Ctrl+N)',
       icon: <Plus size={18} />,
       action: handleNewSession,
-      category: 'Session'
+      category: 'Session',
+      previewVideo: 'https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-circuit-board-97-large.mp4'
+    },
+    {
+      id: 'rename-session',
+      label: 'Rename Session',
+      description: 'Update the identifier for this workspace.',
+      icon: <Edit3 size={18} />,
+      action: handleRenameSession,
+      category: 'Session',
+      previewVideo: 'https://assets.mixkit.co/videos/preview/mixkit-interface-of-a-futuristic-computer-program-31682-large.mp4'
     },
     ...sessions.filter(s => s.id !== currentSession.id).map(s => ({
         id: `switch-${s.id}`,
-        label: `Switch to: ${s.name}`,
-        description: `Last active: ${new Date(s.lastModified).toLocaleTimeString()}`,
+        label: `Switch: ${s.name}`,
+        description: `Jump to session from ${new Date(s.lastModified).toLocaleTimeString()}`,
         icon: <Layers size={18} />,
         action: () => handleSwitchSession(s.id),
         category: 'Session'
     })),
     {
-      id: 'upload-image',
-      label: 'Upload Image',
-      description: 'Attach an image file to the chat context',
-      icon: <ImageIcon size={18} />,
-      action: () => fileInputRef.current?.click(),
-      disabled: isReflexActive || isMemoryActive,
-      category: 'Input'
-    },
-    {
       id: 'clear-chat',
-      label: 'Clear Current Session',
-      description: 'Reset the conversation history',
+      label: 'Clear History',
+      description: 'Wipe current message buffer. (Irreversible)',
       icon: <Trash2 size={18} />,
       action: handleClearChat,
       disabled: isReflexActive || isMemoryActive,
@@ -865,56 +895,48 @@ export default function App() {
     },
     {
       id: 'delete-session',
-      label: 'Delete Current Session',
-      description: 'Permanently remove this session',
+      label: 'Delete Session',
+      description: 'Permanently destroy this workspace.',
       icon: <Trash2 size={18} className="text-red-400" />,
       action: () => {
-          sessionManager.deleteSession(currentSession.id);
-          const newSession = sessionManager.createSession();
-          setCurrentSession(newSession);
-          setMessages(newSession.messages);
-          setSessions(sessionManager.getSessions());
+          if (confirm('Are you sure you want to delete this session?')) {
+            sessionManager.deleteSession(currentSession.id);
+            const newSession = sessionManager.createSession();
+            setCurrentSession(newSession);
+            setMessages(newSession.messages);
+            setSessions(sessionManager.getSessions());
+          }
       },
       category: 'Session'
     },
-    {
-      id: 'system-reset',
-      label: 'Reboot Core System',
-      description: 'Fully re-initialize system stats and chat',
-      icon: <RefreshCw size={18} />,
-      action: handleResetSystem,
-      category: 'System'
-    },
-    {
-      id: 'export-logs',
-      label: 'Export Session (JSON)',
-      description: 'Download current session data',
-      icon: <FileJson size={18} />,
-      action: handleExportLogs,
-      category: 'System'
-    },
+
+    // --- AI Capabilities ---
     {
       id: 'simulate-personas',
       label: 'Simulate Personas',
-      description: 'Run counterfactual analysis on last query',
+      description: isOfflineMode ? 'Unavailable in Offline Mode.' : 'Run counterfactual analysis on the last query.',
       icon: <Users size={18} />,
       action: handleSimulatePersonas,
-      disabled: isReflexActive || isMemoryActive || messages.length === 0,
-      category: 'AI Tools'
+      disabled: isReflexActive || isMemoryActive || messages.length === 0 || isOfflineMode,
+      category: 'AI Tools',
+      previewVideo: 'https://assets.mixkit.co/videos/preview/mixkit-artificial-intelligence-brain-animation-98-large.mp4'
     },
     {
       id: 'consensus-debate',
-      label: 'Start Consensus Debate',
-      description: 'Trigger multi-model debate on topic',
+      label: 'Consensus Debate',
+      description: isOfflineMode ? 'Unavailable in Offline Mode.' : 'Trigger multi-model debate to resolve ambiguity.',
       icon: <Network size={18} />,
       action: handleConsensusDebate,
-      disabled: isReflexActive || isMemoryActive,
-      category: 'AI Tools'
+      disabled: isReflexActive || isMemoryActive || isOfflineMode,
+      category: 'AI Tools',
+      previewVideo: 'https://assets.mixkit.co/videos/preview/mixkit-network-connection-background-loop-31685-large.mp4'
     },
+
+    // --- System Control ---
     {
       id: 'toggle-offline',
-      label: isOfflineMode ? 'Disable Offline Mode' : 'Enable Offline Mode',
-      description: isOfflineMode ? 'Switch back to Cloud AI' : 'Use local in-browser LLM',
+      label: isOfflineMode ? 'Go Online (Cloud)' : 'Go Offline (Local)',
+      description: isOfflineMode ? 'Switch to Cloud AI for max intelligence.' : 'Switch to Local LLM for privacy.',
       icon: <Lock size={18} />,
       action: () => {
         setIsOfflineMode(!isOfflineMode);
@@ -927,6 +949,23 @@ export default function App() {
             metrics: { latency: 0, tokens: 0, confidence: 100 }
         }]);
       },
+      category: 'System',
+      previewVideo: 'https://assets.mixkit.co/videos/preview/mixkit-server-room-with-blue-lights-208-large.mp4'
+    },
+    {
+      id: 'system-reset',
+      label: 'Reboot Core',
+      description: 'Force re-initialization of all subsystems.',
+      icon: <RefreshCw size={18} />,
+      action: handleResetSystem,
+      category: 'System'
+    },
+    {
+      id: 'export-logs',
+      label: 'Export Data',
+      description: 'Download session logs as JSON.',
+      icon: <FileJson size={18} />,
+      action: handleExportLogs,
       category: 'System'
     },
     {
@@ -977,6 +1016,7 @@ export default function App() {
     <div className="flex h-screen bg-slate-950 text-slate-100 font-sans overflow-hidden relative selection:bg-cyan-500/30 selection:text-cyan-50">
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-[#050a15] to-slate-900 animate-aurora z-0"></div>
       <DataStreamBackground variant="sidebar" />
+      <div className="scanline-overlay"></div>
       <div className="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.5),rgba(2,6,23,0.8)),url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 pointer-events-none z-0 mix-blend-overlay"></div>
       
       <CommandPalette 
@@ -1141,7 +1181,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setIsPaletteOpen(true)}
-                      className="p-1.5 rounded-md transition-colors hover:bg-slate-800 text-slate-500 hover:text-cyan-400 group/cmd"
+                      className="p-1.5 rounded-md transition-colors hover:bg-slate-800 text-slate-500 hover:text-cyan-400 group/cmd interactive-hover"
                       title="Command Palette (Ctrl+K)"
                     >
                       <Command size={18} className="group-hover/cmd:scale-110 transition-transform" />
@@ -1194,7 +1234,7 @@ export default function App() {
                 disabled={(!input.trim() && !selectedImage) || isReflexActive || isMemoryActive || isListening}
                 className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-slate-800 text-slate-400 
                           hover:bg-cyan-500 hover:text-white disabled:opacity-30 disabled:hover:bg-slate-800 disabled:hover:text-slate-400
-                          transition-all duration-200 shadow-lg"
+                          transition-all duration-200 shadow-lg interactive-hover"
               >
                 <Send size={18} />
               </button>

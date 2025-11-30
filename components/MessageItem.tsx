@@ -96,7 +96,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             <button 
               onClick={handleCopy}
               className={`
-                absolute top-2 right-2 p-1.5 rounded-md transition-all duration-300 opacity-0 group-hover:opacity-100
+                absolute top-2 right-2 p-1.5 rounded-md transition-all duration-300 opacity-0 group-hover:opacity-100 interactive-hover
                 ${isCopied ? 'bg-green-500/20 text-green-400' : 'bg-black/20 text-slate-400 hover:bg-black/40 hover:text-white'}
               `}
               aria-label="Copy message"
@@ -162,7 +162,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                       href={source.uri} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1.5 bg-black/20 hover:bg-cyan-500/10 border border-cyan-500/20 hover:border-cyan-500/40 rounded transition-colors text-[10px] text-cyan-300 no-underline active:scale-95 transform duration-100"
+                      className="flex items-center gap-1 px-2 py-1.5 bg-black/20 hover:bg-cyan-500/10 border border-cyan-500/20 hover:border-cyan-500/40 rounded transition-colors text-[10px] text-cyan-300 no-underline active:scale-95 transform duration-100 interactive-hover"
                     >
                       <span className="truncate max-w-[120px] md:max-w-[150px]">{source.title}</span>
                       <ExternalLink size={8} className="opacity-50" />

@@ -1,5 +1,6 @@
 import { Lattice } from './Lattice';
 import { LatticeNode, LatticePath } from './types';
+import { memoryStore } from '../../services/vectorDb';
 
 export class NeuroSymbolicCore {
   private lattice: Lattice;
@@ -35,17 +36,33 @@ export class NeuroSymbolicCore {
     this.lattice.addEdge({ sourceId: 'n9', targetId: 'n8', relationType: 'models', weight: 0.4 });
   }
 
-  public reason(query: string): { reasoningTrace: string; confidence: number; graph: any } {
-    // 1. Parse Query & Dynamic Node Generation (Simulated Perception)
+  public async reason(query: string): Promise<{ reasoningTrace: string; confidence: number; graph: any }> {
+    // 1. Parse Query & Retrieve Context (RAG)
     const keywords = query.split(' ').filter(w => w.length > 3);
+    
+    // Real RAG Lookup
+    const retrievedDocs = await memoryStore.search(query, 3);
+    
     const dynamicNodes: LatticeNode[] = keywords.map((k, i) => ({
         id: `dyn-${i}`,
         label: k.charAt(0).toUpperCase() + k.slice(1),
         vector: [],
-        symbolicTags: { category: 'Dynamic' },
-        confidence: 0.7 + (Math.random() * 0.2),
+        symbolicTags: { category: 'Query Concept' },
+        confidence: 0.8,
         type: 'concept'
     }));
+
+    // Convert retrieved docs to nodes
+    retrievedDocs.forEach((doc, i) => {
+        dynamicNodes.push({
+            id: `rag-${i}`,
+            label: doc.content.substring(0, 20) + '...',
+            vector: doc.embedding,
+            symbolicTags: { category: 'Retrieved Fact', sentiment: doc.sentiment || 'neutral' },
+            confidence: (doc as any).score || 0.7,
+            type: 'entity'
+        });
+    });
 
     // Add dynamic nodes to a temporary view of the lattice
     dynamicNodes.forEach(n => this.lattice.addNode(n));
@@ -63,7 +80,7 @@ export class NeuroSymbolicCore {
     let totalConfidence = 0;
     
     reasoningTrace += `> **Semantic Parsing**: Extracted ${keywords.length} tokens.\n`;
-    reasoningTrace += `> **Graph Traversal**: Mapping tokens to HNSL Vector Space...\n`;
+    reasoningTrace += `> **Memory Retrieval**: Found ${retrievedDocs.length} relevant facts in Vector Space.\n`;
 
     if (subgraph.nodes.length > 0) {
       const concepts = subgraph.nodes.map(n => `[${n.label}]`).join(' <-> ');
@@ -72,24 +89,26 @@ export class NeuroSymbolicCore {
       reasoningTrace += `\n**Logical Inference Chain:**\n`;
       let edgeCount = 0;
       
-      // Mix real edges with simulated dynamic edges for robustness
+      // Connect Query Concepts to Retrieved Facts
       const allEdges = [...subgraph.edges];
-      if (allEdges.length < 3 && dynamicNodes.length > 1) {
-          for(let i=0; i<dynamicNodes.length-1; i++) {
-              allEdges.push({
-                  sourceId: dynamicNodes[i].id,
-                  targetId: dynamicNodes[i+1].id,
-                  relationType: Math.random() > 0.5 ? 'implies' : 'correlates_with',
-                  weight: 0.5 + Math.random() * 0.4
-              });
-          }
+      
+      // Heuristic: Connect query terms to retrieved facts if they share semantic similarity (simulated here by proximity in list)
+      if (retrievedDocs.length > 0) {
+          keywords.forEach((k, i) => {
+             allEdges.push({
+                 sourceId: `dyn-${i}`,
+                 targetId: `rag-0`, // Connect to top result
+                 relationType: 'supported_by',
+                 weight: 0.85
+             });
+          });
       }
 
       allEdges.forEach(edge => {
         const source = subgraph.nodes.find(n => n.id === edge.sourceId) || dynamicNodes.find(n => n.id === edge.sourceId);
         const target = subgraph.nodes.find(n => n.id === edge.targetId) || dynamicNodes.find(n => n.id === edge.targetId);
         
-        if (source && target && edgeCount < 5) {
+        if (source && target && edgeCount < 8) {
             const symbol = edge.weight > 0.8 ? '==>' : '-->';
             reasoningTrace += `   ${source.label} ${symbol} ${edge.relationType.toUpperCase()} ${symbol} ${target.label} (φ=${edge.weight.toFixed(2)})\n`;
             edgeCount++;

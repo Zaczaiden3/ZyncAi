@@ -43,6 +43,7 @@
   - [x] Add Neuro Confidence metric to `SystemVisualizer`.
   - [x] Create `NEURO` role for distinct visual feedback.
   - [x] Implement 3D `LatticeVisualizer` for Neuro-Symbolic graph.
+  - [x] **Refine AI Core Prompts**: Enhanced Reflex (Cybernetic), Memory (Ghost Branching), and Consensus (Debate) personas.
 
 ## Phase 3: Optimization & Deployment
 
@@ -62,3 +63,26 @@
 - [x] **"Consensus" Mode Expansion**: Allow 3+ models to debate a complex topic.
 - [x] **Plugin System**: Allow users to add custom "Tools" (e.g., Calculator, Weather) that the Reflex core can use.
 - [x] **Offline Mode**: Basic functionality using a smaller, local LLM (e.g., WebLLM) when offline.
+- [x] **Voice Input Enhancement**: Real-time audio visualization and improved UI.
+
+## Phase 4: Cognitive Expansion & Multi-Modal Synthesis
+
+- [ ] **Text-to-Speech (TTS) Synthesis**
+
+  - [ ] Implement `VoiceSynthesisService` using Web Speech API or external API (e.g., ElevenLabs).
+  - [ ] Add "Speak" button to `MessageItem` for reading responses.
+  - [ ] Create a "Mute/Unmute" global toggle in the UI.
+
+- [ ] **Generative UI Components**
+
+  - [ ] Allow the AI to render React components (e.g., charts, tables, code blocks) dynamically based on context.
+  - [ ] Create a `ComponentRenderer` to safely parse and display these elements.
+
+- [ ] **"Dream State" Memory Optimization**
+
+  - [ ] Implement a background process that clusters and refines topological memory when the system is idle.
+  - [ ] Visualize this "dreaming" process in the `SystemVisualizer`.
+
+- [ ] **External Knowledge Integration**
+  - [ ] Connect `Reflex` core to a real web search API (e.g., Tavily, Serper) for up-to-date information.
+  - [ ] Display citations and sources in the UI.

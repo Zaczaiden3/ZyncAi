@@ -1,4 +1,5 @@
 import { embedText } from './gemini';
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
 interface VectorDocument {
   id: string;
@@ -10,45 +11,28 @@ interface VectorDocument {
   sentiment?: 'positive' | 'neutral' | 'negative' | 'analytical';
 }
 
-// Simple in-memory vector store with localStorage persistence
-// For a production app, use 'voy-search' (WASM) or a server-side vector DB (Pinecone, Weaviate).
-// This implementation uses Cosine Similarity for local retrieval.
+interface VectorDB extends DBSchema {
+  vectors: {
+    key: string;
+    value: VectorDocument;
+    indexes: { 'by-timestamp': number };
+  };
+}
 
+// IndexedDB-based Vector Store
+// Scalable to thousands of documents without blocking the main thread.
 export class VectorStore {
-  private documents: VectorDocument[] = [];
-  private readonly STORAGE_KEY = 'ZYNC_VECTOR_MEMORY';
-  private saveTimeout: NodeJS.Timeout | null = null;
+  private dbPromise: Promise<IDBPDatabase<VectorDB>>;
+  private readonly DB_NAME = 'zync-vector-db';
+  private readonly STORE_NAME = 'vectors';
 
   constructor() {
-    this.load();
-  }
-
-  private load() {
-    const saved = localStorage.getItem(this.STORAGE_KEY);
-    if (saved) {
-      try {
-        this.documents = JSON.parse(saved);
-      } catch (e) {
-        console.error("Failed to load vector memory", e);
-        this.documents = [];
-      }
-    }
-  }
-
-  private save() {
-    // Debounce save to prevent excessive writes to localStorage
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-
-    this.saveTimeout = setTimeout(() => {
-        // Limit local storage size (keep last 500 items to prevent quota issues)
-        if (this.documents.length > 500) {
-            this.documents = this.documents.slice(-500);
-        }
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.documents));
-        this.saveTimeout = null;
-    }, 1000); // Save after 1 second of inactivity
+    this.dbPromise = openDB<VectorDB>(this.DB_NAME, 1, {
+      upgrade(db) {
+        const store = db.createObjectStore('vectors', { keyPath: 'id' });
+        store.createIndex('by-timestamp', 'timestamp');
+      },
+    });
   }
 
   async add(content: string, metadata?: any, sentiment?: 'positive' | 'neutral' | 'negative' | 'analytical') {
@@ -67,13 +51,16 @@ export class VectorStore {
       sentiment
     };
 
-    this.documents.push(doc);
-    this.save();
+    const db = await this.dbPromise;
+    await db.put(this.STORE_NAME, doc);
   }
 
-  async search(query: string, topK: number = 3): Promise<VectorDocument[]> {
+  async search(query: string, topK: number = 5): Promise<VectorDocument[]> {
     const queryEmbedding = await embedText(query);
     if (!queryEmbedding || queryEmbedding.length === 0) return [];
+
+    const db = await this.dbPromise;
+    const allDocs = await db.getAll(this.STORE_NAME);
 
     const now = Date.now();
     const ONE_HOUR = 3600 * 1000;
@@ -83,11 +70,9 @@ export class VectorStore {
     const minDecay = 0.1;
 
     // Calculate Cosine Similarity & Apply Temporal Weighting
-    // Optimization: Use a simple for loop for better performance than map
     const scoredDocs: (VectorDocument & { score: number })[] = [];
     
-    for (let i = 0; i < this.documents.length; i++) {
-        const doc = this.documents[i];
+    for (const doc of allDocs) {
         const similarity = this.cosineSimilarity(queryEmbedding, doc.embedding);
         
         // Temporal Decay: Weight decreases as data gets older
@@ -111,7 +96,6 @@ export class VectorStore {
     let normA = 0;
     let normB = 0;
     
-    // Optimization: Cache length
     const len = vecA.length;
 
     for (let i = 0; i < len; i++) {
@@ -125,9 +109,14 @@ export class VectorStore {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
   
-  clear() {
-      this.documents = [];
-      localStorage.removeItem(this.STORAGE_KEY);
+  async clear() {
+      const db = await this.dbPromise;
+      await db.clear(this.STORE_NAME);
+  }
+
+  async getAllDocuments(): Promise<VectorDocument[]> {
+      const db = await this.dbPromise;
+      return db.getAll(this.STORE_NAME);
   }
 }
 
