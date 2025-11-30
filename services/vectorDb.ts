@@ -17,6 +17,7 @@ interface VectorDocument {
 export class VectorStore {
   private documents: VectorDocument[] = [];
   private readonly STORAGE_KEY = 'ZYNC_VECTOR_MEMORY';
+  private saveTimeout: NodeJS.Timeout | null = null;
 
   constructor() {
     this.load();
@@ -35,11 +36,19 @@ export class VectorStore {
   }
 
   private save() {
-    // Limit local storage size (keep last 500 items to prevent quota issues)
-    if (this.documents.length > 500) {
-        this.documents = this.documents.slice(-500);
+    // Debounce save to prevent excessive writes to localStorage
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
     }
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.documents));
+
+    this.saveTimeout = setTimeout(() => {
+        // Limit local storage size (keep last 500 items to prevent quota issues)
+        if (this.documents.length > 500) {
+            this.documents = this.documents.slice(-500);
+        }
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.documents));
+        this.saveTimeout = null;
+    }, 1000); // Save after 1 second of inactivity
   }
 
   async add(content: string, metadata?: any, sentiment?: 'positive' | 'neutral' | 'negative' | 'analytical') {
@@ -69,25 +78,27 @@ export class VectorStore {
     const now = Date.now();
     const ONE_HOUR = 3600 * 1000;
 
+    // Pre-calculate constants
+    const decayRate = 0.1;
+    const minDecay = 0.1;
+
     // Calculate Cosine Similarity & Apply Temporal Weighting
-    const scoredDocs = this.documents.map(doc => {
-      const similarity = this.cosineSimilarity(queryEmbedding, doc.embedding);
-      
-      // Temporal Decay: Weight decreases as data gets older
-      // Simple decay: 10% loss per hour, min 0.1
-      const ageHours = (now - doc.timestamp) / ONE_HOUR;
-      const decayFactor = Math.max(0.1, 1.0 - (ageHours * 0.1));
-      
-      // Emotional Resonance Boost (if sentiment matches query context - simplified here as just a boost for 'analytical' or 'positive' if we had query sentiment)
-      // For now, we just use the decay as the "Temporal Vector Node" behavior.
-      const temporalScore = similarity * decayFactor;
-
-      // Weighted Score: 70% Similarity, 30% Temporal Recency
-      // This implements the "Dynamic Knowledge Graphing" requirement
-      const finalScore = (similarity * 0.7) + (decayFactor * 0.3);
-
-      return { ...doc, score: finalScore, temporalWeight: decayFactor };
-    });
+    // Optimization: Use a simple for loop for better performance than map
+    const scoredDocs: (VectorDocument & { score: number })[] = [];
+    
+    for (let i = 0; i < this.documents.length; i++) {
+        const doc = this.documents[i];
+        const similarity = this.cosineSimilarity(queryEmbedding, doc.embedding);
+        
+        // Temporal Decay: Weight decreases as data gets older
+        const ageHours = (now - doc.timestamp) / ONE_HOUR;
+        const decayFactor = Math.max(minDecay, 1.0 - (ageHours * decayRate));
+        
+        // Weighted Score: 70% Similarity, 30% Temporal Recency
+        const finalScore = (similarity * 0.7) + (decayFactor * 0.3);
+        
+        scoredDocs.push({ ...doc, score: finalScore, temporalWeight: decayFactor });
+    }
 
     // Sort by score descending
     scoredDocs.sort((a, b) => b.score - a.score);
@@ -99,12 +110,17 @@ export class VectorStore {
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
+    
+    // Optimization: Cache length
+    const len = vecA.length;
 
-    for (let i = 0; i < vecA.length; i++) {
+    for (let i = 0; i < len; i++) {
       dotProduct += vecA[i] * vecB[i];
       normA += vecA[i] * vecA[i];
       normB += vecB[i] * vecB[i];
     }
+
+    if (normA === 0 || normB === 0) return 0;
 
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }

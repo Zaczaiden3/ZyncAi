@@ -14,7 +14,7 @@ import { topologicalMemory } from './cores/memory/TopologicalMemory';
 import { personaSimulator } from './cores/simulation/PersonaSimulator';
 import { sessionManager, ChatSession } from './services/sessionManager';
 import { subscribeToAuthChanges, logoutUser } from './services/auth';
-import { initializeOfflineModel, isOfflineModelReady, generateOfflineResponseStream } from './services/offlineAi';
+
 
 // Lazy Load Heavy Components for Performance Optimization
 const SystemVisualizer = React.lazy(() => import('./components/SystemVisualizer'));
@@ -557,6 +557,8 @@ export default function App() {
       const reflexMsgId = (Date.now() + 1).toString();
       
       try {
+        const { initializeOfflineModel, isOfflineModelReady, generateOfflineResponseStream } = await import('./services/offlineAi');
+
         if (!isOfflineModelReady()) {
            setMessages(prev => [...prev, {
               id: `sys-offline-init-${Date.now()}`,
