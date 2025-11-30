@@ -41,6 +41,15 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Session Optimization on Startup
+  useEffect(() => {
+    sessionManager.optimizeSessions();
+    setSessions(sessionManager.getSessions());
+    const active = sessionManager.getActiveSession();
+    setCurrentSession(active);
+    setMessages(active.messages);
+  }, []);
   const [isSystemGlitching, setIsSystemGlitching] = useState(false);
 
   const [input, setInput] = useState('');
@@ -442,12 +451,17 @@ export default function App() {
     setMobileMenuOpen(false);
     setIsPaletteOpen(false);
 
+    // Neuro-Symbolic Analysis
+    const reasoning = neuroSymbolicCore.reason(query);
+    setNeuroTrace(reasoning.reasoningTrace);
+    setActiveLattice({ nodes: reasoning.graph.nodes, edges: reasoning.graph.edges });
+
     setMessages(prev => [...prev, {
         id: `sim-start-${Date.now()}`,
         role: AIRole.NEURO,
-        text: `**Initiating Counterfactual Persona Simulation**\nQuery: "${query}"\nRunning ${personas.length} concurrent simulation threads...`,
+        text: `**Neuro-Symbolic Lattice Activated**\n${reasoning.reasoningTrace}\n\n**Counterfactual Simulation Protocol**\nQuery: "${query}"\nSpawning ${personas.length} divergent persona threads...`,
         timestamp: Date.now(),
-        metrics: { latency: 10, tokens: 15, confidence: 100 }
+        metrics: { latency: 15, tokens: 30, confidence: reasoning.confidence * 100 }
     }]);
 
     for (const persona of personas) {
@@ -521,120 +535,9 @@ export default function App() {
     }
   };
 
-  const commands: CommandOption[] = [
-    {
-      id: 'new-session',
-      label: 'New Session',
-      description: 'Create a fresh chat session',
-      icon: <Plus size={18} />,
-      action: handleNewSession
-    },
-    ...sessions.filter(s => s.id !== currentSession.id).map(s => ({
-        id: `switch-${s.id}`,
-        label: `Switch to: ${s.name}`,
-        description: `Last active: ${new Date(s.lastModified).toLocaleTimeString()}`,
-        icon: <Layers size={18} />,
-        action: () => handleSwitchSession(s.id)
-    })),
-    {
-      id: 'upload-image',
-      label: 'Upload Image',
-      description: 'Attach an image file to the chat context',
-      icon: <ImageIcon size={18} />,
-      action: () => fileInputRef.current?.click()
-    },
-    {
-      id: 'clear-chat',
-      label: 'Clear Current Session',
-      description: 'Reset the conversation history',
-      icon: <Trash2 size={18} />,
-      action: handleClearChat
-    },
-    {
-      id: 'delete-session',
-      label: 'Delete Current Session',
-      description: 'Permanently remove this session',
-      icon: <Trash2 size={18} className="text-red-400" />,
-      action: () => {
-          sessionManager.deleteSession(currentSession.id);
-          const newSession = sessionManager.createSession();
-          setCurrentSession(newSession);
-          setMessages(newSession.messages);
-          setSessions(sessionManager.getSessions());
-      }
-    },
-    {
-      id: 'system-reset',
-      label: 'Reboot Core System',
-      description: 'Fully re-initialize system stats and chat',
-      icon: <RefreshCw size={18} />,
-      action: handleResetSystem
-    },
-    {
-      id: 'export-logs',
-      label: 'Export Session (JSON)',
-      description: 'Download current session data',
-      icon: <FileJson size={18} />,
-      action: handleExportLogs
-    },
-    {
-      id: 'simulate-personas',
-      label: 'Simulate Personas',
-      description: 'Run counterfactual analysis on last query',
-      icon: <Users size={18} />,
-      action: handleSimulatePersonas
-    },
-    {
-      id: 'consensus-debate',
-      label: 'Start Consensus Debate',
-      description: 'Trigger multi-model debate on topic',
-      icon: <Network size={18} />,
-      action: handleConsensusDebate
-    },
-    {
-      id: 'toggle-offline',
-      label: isOfflineMode ? 'Disable Offline Mode' : 'Enable Offline Mode',
-      description: isOfflineMode ? 'Switch back to Cloud AI' : 'Use local in-browser LLM',
-      icon: <Lock size={18} />,
-      action: () => {
-        setIsOfflineMode(!isOfflineMode);
-        setIsPaletteOpen(false);
-        setMessages(prev => [...prev, {
-            id: `sys-mode-${Date.now()}`,
-            role: AIRole.REFLEX,
-            text: `**System Mode Switched**\nNow using: ${!isOfflineMode ? 'OFFLINE (Local LLM)' : 'ONLINE (Cloud AI)'}`,
-            timestamp: Date.now(),
-            metrics: { latency: 0, tokens: 0, confidence: 100 }
-        }]);
-      }
-    },
-    {
-      id: 'status-report',
-      label: 'System Status',
-      description: 'View current operational status',
-      icon: <Activity size={18} />,
-      action: () => setMobileMenuOpen(true) 
-    },
-    {
-      id: 'logout',
-      label: 'Terminate Session',
-      description: 'Logout and return to secure gateway',
-      icon: <Lock size={18} />,
-      action: handleLogout
-    }
-  ];
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if ((!input.trim() && !selectedImage) || isReflexActive || isMemoryActive) return;
 
-    const userText = input;
-    const userImage = selectedImage;
-    const userAttachmentType = attachmentType;
-    
-    setInput('');
-    clearImage();
-    setIsAtBottom(true);
+  const processUserMessage = async (userText: string, userImage: string | null, userAttachmentType: 'image' | 'text' | null) => {
     
     // 1. Add User Message
     const userMsg: Message = {
@@ -892,6 +795,28 @@ export default function App() {
       setTimeout(() => setSystemStats(prev => ({ ...prev, currentTask: 'SYSTEM_IDLE' })), 3000);
     }
   };
+
+  const handleTestMemoryPuzzle = () => {
+      setIsPaletteOpen(false);
+      setMobileMenuOpen(false);
+      const puzzle = "System Test: Execute Ghost Branching Simulation on the 'Ship of Theseus' paradox applied to AI identity continuity during model updates.";
+      processUserMessage(puzzle, null, null);
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if ((!input.trim() && !selectedImage) || isReflexActive || isMemoryActive) return;
+
+    const userText = input;
+    const userImage = selectedImage;
+    const userAttachmentType = attachmentType;
+    
+    setInput('');
+    clearImage();
+    setIsAtBottom(true);
+    
+    await processUserMessage(userText, userImage, userAttachmentType);
+  };
   const handleScroll = () => {
     if (messagesContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
@@ -900,6 +825,116 @@ export default function App() {
       setShowScrollButton(!isBottom);
     }
   };
+
+  const commands: CommandOption[] = [
+    {
+      id: 'new-session',
+      label: 'New Session',
+      description: 'Create a fresh chat session',
+      icon: <Plus size={18} />,
+      action: handleNewSession
+    },
+    ...sessions.filter(s => s.id !== currentSession.id).map(s => ({
+        id: `switch-${s.id}`,
+        label: `Switch to: ${s.name}`,
+        description: `Last active: ${new Date(s.lastModified).toLocaleTimeString()}`,
+        icon: <Layers size={18} />,
+        action: () => handleSwitchSession(s.id)
+    })),
+    {
+      id: 'upload-image',
+      label: 'Upload Image',
+      description: 'Attach an image file to the chat context',
+      icon: <ImageIcon size={18} />,
+      action: () => fileInputRef.current?.click()
+    },
+    {
+      id: 'clear-chat',
+      label: 'Clear Current Session',
+      description: 'Reset the conversation history',
+      icon: <Trash2 size={18} />,
+      action: handleClearChat
+    },
+    {
+      id: 'delete-session',
+      label: 'Delete Current Session',
+      description: 'Permanently remove this session',
+      icon: <Trash2 size={18} className="text-red-400" />,
+      action: () => {
+          sessionManager.deleteSession(currentSession.id);
+          const newSession = sessionManager.createSession();
+          setCurrentSession(newSession);
+          setMessages(newSession.messages);
+          setSessions(sessionManager.getSessions());
+      }
+    },
+    {
+      id: 'system-reset',
+      label: 'Reboot Core System',
+      description: 'Fully re-initialize system stats and chat',
+      icon: <RefreshCw size={18} />,
+      action: handleResetSystem
+    },
+    {
+      id: 'export-logs',
+      label: 'Export Session (JSON)',
+      description: 'Download current session data',
+      icon: <FileJson size={18} />,
+      action: handleExportLogs
+    },
+    {
+      id: 'simulate-personas',
+      label: 'Simulate Personas',
+      description: 'Run counterfactual analysis on last query',
+      icon: <Users size={18} />,
+      action: handleSimulatePersonas
+    },
+    {
+      id: 'consensus-debate',
+      label: 'Start Consensus Debate',
+      description: 'Trigger multi-model debate on topic',
+      icon: <Network size={18} />,
+      action: handleConsensusDebate
+    },
+    {
+      id: 'toggle-offline',
+      label: isOfflineMode ? 'Disable Offline Mode' : 'Enable Offline Mode',
+      description: isOfflineMode ? 'Switch back to Cloud AI' : 'Use local in-browser LLM',
+      icon: <Lock size={18} />,
+      action: () => {
+        setIsOfflineMode(!isOfflineMode);
+        setIsPaletteOpen(false);
+        setMessages(prev => [...prev, {
+            id: `sys-mode-${Date.now()}`,
+            role: AIRole.REFLEX,
+            text: `**System Mode Switched**\nNow using: ${!isOfflineMode ? 'OFFLINE (Local LLM)' : 'ONLINE (Cloud AI)'}`,
+            timestamp: Date.now(),
+            metrics: { latency: 0, tokens: 0, confidence: 100 }
+        }]);
+      }
+    },
+    {
+      id: 'status-report',
+      label: 'System Status',
+      description: 'View current operational status',
+      icon: <Activity size={18} />,
+      action: () => setMobileMenuOpen(true) 
+    },
+    {
+      id: 'logout',
+      label: 'Terminate Session',
+      description: 'Logout and return to secure gateway',
+      icon: <Lock size={18} />,
+      action: handleLogout
+    },
+    {
+      id: 'test-memory-puzzle',
+      label: 'Test Memory: Logic Puzzle',
+      description: 'Run a complex logic puzzle to test Ghost Branching',
+      icon: <Activity size={18} />,
+      action: handleTestMemoryPuzzle
+    }
+  ];
 
   if (!isAuthenticated) {
     return (

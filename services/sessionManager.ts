@@ -151,6 +151,38 @@ class SessionManager {
   exportSessionToJson(session: ChatSession): string {
       return JSON.stringify(session, null, 2);
   }
+
+  optimizeSessions(): void {
+    let sessions = this.getSessions();
+    const initialCount = sessions.length;
+
+    // Filter out invalid sessions or sessions with no messages (unless it's the only one created just now)
+    // We keep sessions that have messages OR are the active one (to prevent deleting a just-created session)
+    const activeId = this.getActiveSessionId();
+    
+    sessions = sessions.filter(s => {
+        const isValid = s.messages && Array.isArray(s.messages);
+        const hasMessages = s.messages.length > 0;
+        const isActive = s.id === activeId;
+        return isValid && (hasMessages || isActive);
+    });
+    
+    // Ensure we still have at least one session
+    if (sessions.length === 0) {
+        this.createSession('New Session');
+        return;
+    }
+
+    if (sessions.length !== initialCount) {
+        this.saveSessions(sessions);
+        console.log(`[SessionManager] Optimized: Pruned ${initialCount - sessions.length} empty/invalid sessions.`);
+    }
+    
+    // Verify active session still exists
+    if (activeId && !sessions.find(s => s.id === activeId)) {
+        this.setActiveSession(sessions[0].id);
+    }
+  }
 }
 
 export const sessionManager = new SessionManager();
