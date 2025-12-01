@@ -126,14 +126,32 @@ const LatticeNodeItem: React.FC<{ node: LatticeNode, pos: { x: number, y: number
     }
   }, [pos]);
 
+  // Dynamic Styling based on Node Type
+  let nodeColor = 'bg-emerald-400';
+  let shadowColor = 'rgba(52,211,153,0.8)';
+  let labelColor = 'text-emerald-200';
+  let scale = 'scale-100';
+
+  if (node.type === 'memory') {
+      nodeColor = 'bg-fuchsia-500';
+      shadowColor = 'rgba(217,70,239,0.8)';
+      labelColor = 'text-fuchsia-200';
+      scale = 'scale-125';
+  } else if (node.type === 'ghost') {
+      nodeColor = 'bg-slate-200';
+      shadowColor = 'rgba(255,255,255,0.5)';
+      labelColor = 'text-slate-300';
+      scale = 'scale-90 opacity-60';
+  }
+
   return (
     <div
       ref={ref}
-      className="lattice-node absolute transform-gpu flex items-center justify-center group"
+      className={`lattice-node absolute transform-gpu flex items-center justify-center group ${scale}`}
     >
-      <div className="w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.8)] group-hover:scale-150 transition-transform"></div>
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 text-[8px] text-emerald-200 opacity-0 group-hover:opacity-100 whitespace-nowrap bg-black/80 px-1 rounded pointer-events-none">
-        {node.label}
+      <div className={`w-2 h-2 rounded-full shadow-[0_0_10px_${shadowColor}] group-hover:scale-150 transition-transform ${nodeColor}`}></div>
+      <div className={`absolute top-3 left-1/2 -translate-x-1/2 text-[8px] ${labelColor} opacity-0 group-hover:opacity-100 whitespace-nowrap bg-black/80 px-1 rounded pointer-events-none z-20`}>
+        {node.label} <span className="opacity-50 text-[6px] uppercase">({node.type})</span>
       </div>
     </div>
   );

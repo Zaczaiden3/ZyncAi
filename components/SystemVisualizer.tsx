@@ -382,7 +382,7 @@ const SystemVisualizer: React.FC<SystemVisualizerProps> = ({
                         <span className="text-[10px] font-mono text-cyan-400 w-8">REF</span>
                         <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden relative group">
                             {/* Threshold Marker */}
-                            <div className="absolute top-0 bottom-0 w-px bg-red-500/50 z-20" style={{ left: '85%' }}></div>
+                            <div className="absolute top-0 bottom-0 w-px bg-red-500/50 z-20 threshold-marker"></div>
                             
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-45 animate-shimmer z-10"></div>
                             <ConfBar 
@@ -402,7 +402,7 @@ const SystemVisualizer: React.FC<SystemVisualizerProps> = ({
                         <span className="text-[10px] font-mono text-fuchsia-400 w-8">MEM</span>
                         <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden relative group">
                             {/* Threshold Marker */}
-                            <div className="absolute top-0 bottom-0 w-px bg-red-500/50 z-20" style={{ left: '85%' }}></div>
+                            <div className="absolute top-0 bottom-0 w-px bg-red-500/50 z-20 threshold-marker"></div>
 
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-45 animate-shimmer z-10"></div>
                             <ConfBar 

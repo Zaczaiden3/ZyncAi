@@ -73,3 +73,7 @@
     box-shadow: 0 0 8px rgba(217, 70, 239, 0.6);
   }
 }
+
+.threshold-marker {
+  left: 85%;
+}

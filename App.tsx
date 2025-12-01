@@ -46,12 +46,12 @@ const DreamOverlay = React.memo(() => {
           key={i} 
           className="dream-particle"
           style={{
-            left: p.left,
-            animationDelay: p.animationDelay,
-            width: p.width,
-            height: p.height,
-            opacity: p.opacity
-          }}
+            '--p-left': p.left,
+            '--p-delay': p.animationDelay,
+            '--p-width': p.width,
+            '--p-height': p.height,
+            '--p-opacity': p.opacity
+          } as React.CSSProperties}
         />
       ))}
     </div>

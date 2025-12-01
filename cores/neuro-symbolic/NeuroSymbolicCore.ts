@@ -199,6 +199,34 @@ export class NeuroSymbolicCore {
 
       return scenarios;
   }
+  /**
+   * Validates content against the Neuro-Symbolic Lattice.
+   * Checks for logical inconsistencies or contradictions with high-confidence nodes.
+   */
+  public async validateConsistency(content: string): Promise<string[]> {
+      const issues: string[] = [];
+      const nodes = this.lattice.getNodes();
+      
+      // 1. Check for contradictions with High-Confidence Axioms (>0.98)
+      const axioms = nodes.filter(n => n.confidence > 0.98);
+      for (const axiom of axioms) {
+          // specific negation check (heuristic)
+          if (content.toLowerCase().includes(`not ${axiom.label.toLowerCase()}`) || 
+              content.toLowerCase().includes(`${axiom.label.toLowerCase()} is false`)) {
+              issues.push(`Contradiction detected: Content denies high-confidence axiom [${axiom.label}].`);
+          }
+      }
+
+      // 2. Check for Circular Logic (Heuristic)
+      if (content.includes("therefore") && content.includes("because")) {
+          const parts = content.split("therefore");
+          if (parts[0].includes(parts[1].trim())) {
+               issues.push("Potential Circular Logic detected: Conclusion appears in Premise.");
+          }
+      }
+
+      return issues;
+  }
 }
 
 export const neuroSymbolicCore = new NeuroSymbolicCore();
