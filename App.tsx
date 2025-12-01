@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { SpeechProvider, useSpeechContext } from './contexts/SpeechContext';
 import { Volume2, VolumeX, Send, Activity, Terminal, Command, Menu, ArrowDown, Paperclip, ImageIcon, Trash2, RefreshCw, Download, Lock, Network, Users, Plus, FileJson, Layers, Edit3, Settings, Moon, Sun } from 'lucide-react';
 import { dreamService } from './services/dreamService';
-import { AIRole, Message, SystemStats, WorkflowExecutionLog } from './types';
+import { AIRole, Message, SystemStats, WorkflowExecutionLog, Workflow } from './types';
 import { generateReflexResponseStream, generateMemoryAnalysisStream, generateConsensusRecoveryStream, generateConsensusDebateStream, getCoreConfig } from './services/gemini';
 import { workflowEngine } from './services/workflowEngine';
+import './services/tools'; // Register default tools
 import MessageItem from './components/MessageItem';
 import CommandPalette, { CommandOption } from './components/CommandPalette';
 import DataStreamBackground from './components/DataStreamBackground';
@@ -599,6 +600,59 @@ function App() {
     }
   };
 
+  const handleTestWorkflow = async () => {
+    setIsPaletteOpen(false);
+    setMobileMenuOpen(false);
+    
+    const testWorkflow: Workflow = {
+      id: 'sys-check-1',
+      name: 'System Diagnostics',
+      description: 'Routine system health check workflow',
+      steps: [
+        { id: 'time-check', toolName: 'get_current_time' },
+        { id: 'calc-load', toolName: 'calculator', argsTemplate: { expression: 'Math.floor(Math.random() * 100)' } },
+        { id: 'sys-stat', toolName: 'get_system_status', dependsOn: ['time-check'] }
+      ]
+    };
+
+    workflowEngine.registerWorkflow(testWorkflow);
+
+    setMessages(prev => [...prev, {
+        id: `wf-start-${Date.now()}`,
+        role: AIRole.REFLEX,
+        text: `**Initiating Workflow: ${testWorkflow.name}**\nExecuting ${testWorkflow.steps.length} steps...`,
+        timestamp: Date.now(),
+        metrics: { latency: 0, tokens: 0, confidence: 100 }
+    }]);
+
+    try {
+        const results = await workflowEngine.executeWorkflow(testWorkflow.id, {});
+        
+        // Format results for display
+        let resultText = `**Workflow Complete**\n`;
+        results.forEach((val: any, stepId: string) => {
+            resultText += `- **${stepId}**: \`${val}\`\n`;
+        });
+
+        setMessages(prev => [...prev, {
+            id: `wf-end-${Date.now()}`,
+            role: AIRole.REFLEX,
+            text: resultText,
+            timestamp: Date.now(),
+            metrics: { latency: 100, tokens: 50, confidence: 100 }
+        }]);
+
+    } catch (e) {
+        setMessages(prev => [...prev, {
+            id: `wf-err-${Date.now()}`,
+            role: AIRole.REFLEX,
+            text: `**Workflow Failed**\nError: ${e}`,
+            timestamp: Date.now(),
+            metrics: { latency: 0, tokens: 0, confidence: 0 }
+        }]);
+    }
+  };
+
 
 
   const processUserMessage = async (userText: string, userImage: string | null, userAttachmentType: 'image' | 'text' | null) => {
@@ -1090,6 +1144,14 @@ function App() {
       action: handleTestMemoryPuzzle,
       disabled: isReflexActive || isMemoryActive,
       category: 'AI Tools'
+    },
+    {
+      id: 'test-workflow',
+      label: 'Test Workflow Engine',
+      description: 'Run a diagnostic workflow trace.',
+      icon: <Network size={18} />,
+      action: handleTestWorkflow,
+      category: 'System'
     }
   ], [sessions, currentSession, isOfflineMode, isReflexActive, isMemoryActive, messages.length]);
 
