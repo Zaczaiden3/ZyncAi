@@ -13,9 +13,7 @@ describe('LoginPage Component', () => {
   it('renders the login form by default', () => {
     render(<LoginPage onLogin={() => {}} onGlitch={() => {}} />);
     // ZYNC_OS is split into spans, so we check for the parts or use a custom matcher
-    expect(screen.getByText((content, element) => {
-        return element?.tagName.toLowerCase() === 'h1' && content.includes('ZYNC');
-    })).toBeDefined();
+    expect(screen.getByAltText('ZyncAI')).toBeDefined();
     expect(screen.getByPlaceholderText('USER@DOMAIN.EXT')).toBeDefined();
     expect(screen.getByPlaceholderText('••••••')).toBeDefined();
     expect(screen.getByText('INITIALIZE')).toBeDefined();

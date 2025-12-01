@@ -917,7 +917,7 @@ function App() {
           setMessages(prev => [...prev, {
               id: `sys-pass-${Date.now()}`,
               role: AIRole.SYSTEM,
-              text: `**[High-Speed Pass-Through Active]**\nReflex Confidence: ${reflexFinalConfidence}%. Memory Core Bypassed for latency optimization.`,
+              text: `⚡ **High-Speed Pass-Through**\n\n*Reflex Confidence: ${reflexFinalConfidence}%*\n> Memory Core bypassed for latency optimization.`,
               timestamp: Date.now(),
               metrics: { latency: 0, tokens: 0, confidence: 100 }
           }]);
@@ -984,7 +984,7 @@ function App() {
         // --- NEURO-SYMBOLIC VALIDATION ---
         const validationIssues = await neuroSymbolicCore.validateConsistency(memoryFullResponse);
         if (validationIssues.length > 0) {
-            const validationText = `\n\n**[Neuro-Symbolic Correction]**\nLogic Gate detected inconsistencies:\n${validationIssues.map(i => `- ${i}`).join('\n')}`;
+            const validationText = `\n\n---\n🧠 **Neuro-Symbolic Logic Gate**\n> **Inconsistency Detected**:\n${validationIssues.map(i => `> - ⚠ ${i}`).join('\n')}`;
             
             // Append to existing message
             setMessages(prev => prev.map(msg => 
