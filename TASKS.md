@@ -90,7 +90,9 @@
   - [x] Display citations and sources in the UI.
 
 - [x] **Offline Mode Implementation**
+
   - [x] Integrate `@mlc-ai/web-llm` for local inference.
+
   - [x] Add UI toggle and status indicators.
   - [x] Verify offline model initialization and response generation.
 
@@ -98,7 +100,7 @@
 
 - [ ] **Agentic Workflows & Tools-as-Programs**
 
-  - [ ] **Workflow Chaining**: Allow Reflex to chain tools (search -> calc -> summarize) with visual trace.
+  - [/] **Workflow Chaining**: Allow Reflex to chain tools (search -> calc -> summarize) with visual trace. (Engine & Visualizer implemented)
   - [ ] **User-Defined Tools**: Implement a simple DSL/JSON schema for custom tools.
 
 - [ ] **Memory Governance & Introspection**
