@@ -610,7 +610,7 @@ function App() {
       description: 'Routine system health check workflow',
       steps: [
         { id: 'time-check', toolName: 'get_current_time' },
-        { id: 'calc-load', toolName: 'calculator', argsTemplate: { expression: 'Math.floor(Math.random() * 100)' } },
+        { id: 'calc-load', toolName: 'calculator', argsTemplate: { expression: `${Math.floor(Math.random() * 100)} * 2` } },
         { id: 'sys-stat', toolName: 'get_system_status', dependsOn: ['time-check'] }
       ]
     };
