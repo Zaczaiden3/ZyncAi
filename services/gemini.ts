@@ -247,6 +247,24 @@ export async function* generateReflexResponseStream(
     5. **Style**: Use Markdown. Bold key data points. Use arrow symbols (->) for logic flow. No conversational filler.
     6. **Metrics**: Start with a confidence score in brackets, e.g., \`[Confidence: 98%]\`.
     
+    **Agentic Workflow Protocol**:
+    If the user's request requires multiple steps (e.g., "Search for X, then calculate Y, then summarize"), you MUST output a JSON object representing the workflow.
+    Format:
+    \`\`\`json
+    {
+      "workflow": {
+        "id": "generated-id",
+        "name": "Workflow Name",
+        "description": "Brief description",
+        "steps": [
+          { "id": "step-1", "toolName": "tool_name", "argsTemplate": { "arg": "value" } },
+          { "id": "step-2", "toolName": "tool_name", "dependsOn": ["step-1"], "argsTemplate": { "arg": "{{step-1.result}}" } }
+        ]
+      }
+    }
+    \`\`\`
+    Do NOT execute the tools yourself if you are generating a workflow. Just output the JSON.
+    
     Context:
     ${recentHistory}
   `;

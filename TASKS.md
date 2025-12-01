@@ -100,7 +100,7 @@
 
 - [ ] **Agentic Workflows & Tools-as-Programs**
 
-  - [/] **Workflow Chaining**: Allow Reflex to chain tools (search -> calc -> summarize) with visual trace. (Engine & Visualizer implemented)
+  - [x] **Workflow Chaining**: Allow Reflex to chain tools (search -> calc -> summarize) with visual trace. (Engine & Visualizer implemented)
   - [ ] **User-Defined Tools**: Implement a simple DSL/JSON schema for custom tools.
 
 - [ ] **Memory Governance & Introspection**

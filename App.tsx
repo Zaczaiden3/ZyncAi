@@ -819,6 +819,54 @@ function App() {
             reflexConfidence: Math.min(99, 70 + (update.fullText.length / 10)) 
         }));
       }
+      
+      // --- AGENTIC WORKFLOW HANDLER ---
+      // Check if Reflex generated a workflow JSON
+      const workflowMatch = reflexFullResponse.match(/```json\s*(\{\s*"workflow":[\s\S]*?\})\s*```/);
+      
+      if (workflowMatch) {
+          try {
+              const workflowJson = JSON.parse(workflowMatch[1]);
+              const workflow = workflowJson.workflow;
+              
+              setMessages(prev => [...prev, {
+                  id: `wf-detect-${Date.now()}`,
+                  role: AIRole.REFLEX,
+                  text: `**Agentic Workflow Detected**: *${workflow.name}*\nInitializing execution sequence...`,
+                  timestamp: Date.now(),
+                  metrics: { latency: 0, tokens: 0, confidence: 100 }
+              }]);
+
+              workflowEngine.registerWorkflow(workflow);
+              
+              // Execute Workflow
+              const results = await workflowEngine.executeWorkflow(workflow.id, {});
+              
+              // Format results
+              let resultText = `**Workflow Execution Complete**\n`;
+              results.forEach((val: any, stepId: string) => {
+                  resultText += `- **${stepId}**: \`${val}\`\n`;
+              });
+
+              setMessages(prev => [...prev, {
+                  id: `wf-result-${Date.now()}`,
+                  role: AIRole.REFLEX,
+                  text: resultText,
+                  timestamp: Date.now(),
+                  metrics: { latency: 0, tokens: 0, confidence: 100 }
+              }]);
+
+          } catch (e) {
+              console.error("Failed to execute agentic workflow", e);
+              setMessages(prev => [...prev, {
+                  id: `wf-fail-${Date.now()}`,
+                  role: AIRole.REFLEX,
+                  text: `**Workflow Execution Failed**\nError parsing or executing workflow: ${e}`,
+                  timestamp: Date.now(),
+                  metrics: { latency: 0, tokens: 0, confidence: 0 }
+              }]);
+          }
+      }
 
       setIsReflexActive(false);
 

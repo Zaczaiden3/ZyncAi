@@ -484,22 +484,68 @@ export default SystemVisualizer;
 // --- Subcomponents ---
 
 const WorkflowTrace = ({ logs }: { logs: WorkflowExecutionLog[] }) => {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [logs]);
+
   return (
-    <div className="bg-slate-900/30 rounded-lg border border-slate-800 p-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent font-mono text-[9px]">
-      {logs.map((log, i) => (
-        <div key={i} className="flex gap-2 items-center mb-1 last:mb-0">
-          <span className="text-slate-500">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })}</span>
-          <span className={`
-            ${log.status === 'completed' ? 'text-emerald-400' : 
-              log.status === 'failed' ? 'text-red-400' : 
-              log.status === 'running' ? 'text-cyan-400' : 'text-slate-400'}
-          `}>
-            [{log.status.toUpperCase()}]
-          </span>
-          <span className="text-slate-300">{log.stepId}</span>
-          {log.error && <span className="text-red-400 truncate max-w-[100px]">{log.error}</span>}
-        </div>
-      ))}
+    <div ref={scrollRef} className="bg-slate-950/50 rounded-lg border border-slate-800/50 p-3 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent font-mono text-[10px] space-y-2 shadow-inner">
+      {logs.length === 0 ? (
+        <div className="text-slate-600 italic text-center py-4">Waiting for workflow execution...</div>
+      ) : (
+        logs.map((log, i) => (
+          <div key={i} className="group relative border-l-2 border-slate-800 pl-3 py-1 transition-all hover:border-cyan-500/50 hover:bg-slate-900/30 rounded-r">
+            <div className="flex items-center gap-2 justify-between">
+                <div className="flex items-center gap-2">
+                    <span className="text-slate-600 text-[9px]">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })}</span>
+                    <span className={`font-bold tracking-wider ${
+                        log.status === 'completed' ? 'text-emerald-400' : 
+                        log.status === 'failed' ? 'text-red-400' : 
+                        log.status === 'running' ? 'text-cyan-400 animate-pulse' : 'text-slate-500'
+                    }`}>
+                        {log.status === 'completed' && <Shield size={10} className="inline mr-1" />}
+                        {log.status === 'failed' && <AlertTriangle size={10} className="inline mr-1" />}
+                        {log.status === 'running' && <RefreshCw size={10} className="inline mr-1 animate-spin" />}
+                        {log.stepId}
+                    </span>
+                </div>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded ${
+                    log.status === 'completed' ? 'bg-emerald-500/10 text-emerald-300' : 
+                    log.status === 'failed' ? 'bg-red-500/10 text-red-300' : 
+                    log.status === 'running' ? 'bg-cyan-500/10 text-cyan-300' : 'bg-slate-800 text-slate-400'
+                }`}>
+                    {log.status.toUpperCase()}
+                </span>
+            </div>
+            
+            {/* Details on Hover */}
+            <div className="hidden group-hover:block mt-2 p-2 bg-black/60 rounded border border-slate-700/50 text-slate-300 text-[9px] animate-in fade-in slide-in-from-top-1">
+                {log.input && (
+                    <div className="mb-1">
+                        <span className="text-slate-500 uppercase mr-2">Input:</span>
+                        <span className="font-mono text-cyan-200/80 break-all">{JSON.stringify(log.input)}</span>
+                    </div>
+                )}
+                {log.output && (
+                    <div>
+                        <span className="text-slate-500 uppercase mr-2">Output:</span>
+                        <span className="font-mono text-emerald-200/80 break-all">{JSON.stringify(log.output)}</span>
+                    </div>
+                )}
+                {log.error && (
+                    <div className="text-red-400 mt-1">
+                        <span className="uppercase mr-2 font-bold">Error:</span>
+                        {log.error}
+                    </div>
+                )}
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 };
