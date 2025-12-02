@@ -19,7 +19,7 @@
   - [x] Set up Vitest or Jest for unit testing utility functions.
   - [x] Create component tests for `MessageItem`.
   - [x] Create component tests for `SystemVisualizer`.
-  - [x] **Security Audit**: Review API key usage and implement `SECURITY.md`.
+  - [x] **Security Audit**: Review API key usage and implement `SECURITY.md` (Updated with PII & Injection policies).
   - [x] **Code Refactoring**: Move source files to `src/` directory.
   - [x] **Gemini Service Refactor**: Implement structured chat history to prevent prompt injection (Removed manual context stuffing).
   - [x] **Testing Checklist**: Create a comprehensive `TESTING_CHECKLIST.md` for manual and automated testing.
@@ -106,23 +106,30 @@
 - [x] **Agentic Workflows & Tools-as-Programs**
 
   - [x] **Workflow Chaining**: Allow Reflex to chain tools (search -> calc -> summarize) with visual trace. (Engine & Visualizer implemented)
-  - [x] **User-Defined Tools**: Implement a simple DSL/JSON schema for custom tools.
+  - [x] **User-Defined Tools**: Implement a simple DSL/JSON schema for custom tools. (Verified in Code)
 
 - [x] **Memory Governance & Introspection**
 
-  - [x] **Memory Inspector**: UI to inspect, edit, and pin nodes in TopologicalMemory.
-  - [x] **Memory Policies**: Implement forgetting, compressing, and redacting with "memory diff".
+  - [x] **Memory Inspector**: UI to inspect, edit, and pin nodes in TopologicalMemory. (Verified in Code)
+  - [x] **Memory Policies**: Implement forgetting, compressing, and redacting with "memory diff". (Verified in Code)
 
 - [x] **Persona & Consensus Research Mode**
 
-  - [x] **Experiment Lab**: Configurable personas, controlled prompts, and exportable logs.
-  - [x] **Evaluation Hooks**: Scoring and user ratings for answer quality.
+  - [x] **Experiment Lab**: Configurable personas, controlled prompts, and exportable logs. (Verified in Code)
+  - [x] **Evaluation Hooks**: Scoring and user ratings for answer quality. (Verified in Code)
 
 - [x] **UX & Productization**
 
-  - [x] **Role-Based Boards**: Executive (analytics) vs Employee (tasks) views.
-  - [x] **Safety & Policy**: Policy modules (PII masking, restricted calls) and settings toggles.
+  - [x] **Role-Based Boards**: Executive (analytics) vs Employee (tasks) views. (Verified in Code)
+  - [x] **Safety & Policy**: Policy modules (PII masking, restricted calls) and settings toggles. (Verified in Code)
 
 - [x] **Technical Hardening**
-  - [x] **Observability**: Instrument cores with metrics (latency, token usage) and "System Health" UI.
-  - [x] **Deterministic Paths**: Schema-validated tool calls and component rendering.
+  - [x] **Observability**: Instrument cores with metrics (latency, token usage) and "System Health" UI. (Verified in Code)
+  - [x] **Deterministic Paths**: Schema-validated tool calls and component rendering. (Verified in Code)
+
+## Phase 6: Deployment & Ops (Completed)
+
+- [x] **Build Verification**: `npm run build` passes.
+- [x] **Lint Verification**: `npm run lint` passes.
+- [x] **Docker**: Dockerfile created and verified locally (Environment restrictions apply).
+- [x] **Documentation**: Created `DEPLOYMENT_GUIDE.md` and `MANUAL_TESTING_PHASE_5.md`.
