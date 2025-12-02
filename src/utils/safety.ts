@@ -14,8 +14,8 @@ export const SafetyUtils = {
   maskPII: (text: string): string => {
     let masked = text;
     masked = masked.replace(SafetyUtils.patterns.email, '[REDACTED: EMAIL]');
-    masked = masked.replace(SafetyUtils.patterns.phone, '[REDACTED: PHONE]');
     masked = masked.replace(SafetyUtils.patterns.creditCard, '[REDACTED: CREDIT_CARD]');
+    masked = masked.replace(SafetyUtils.patterns.phone, '[REDACTED: PHONE]');
     masked = masked.replace(SafetyUtils.patterns.ssn, '[REDACTED: SSN]');
     masked = masked.replace(SafetyUtils.patterns.ipv4, '[REDACTED: IP]');
     return masked;

@@ -14,6 +14,7 @@ All automated tests have been executed and are **PASSING**.
   - `src/cores/neuro-symbolic/Lattice.test.ts`: Verified graph operations and pathfinding.
   - `src/services/gemini.test.ts`: Verified API stream handling and fallback logic (Mocked).
   - `src/services/offlineAi.test.ts`: Verified local model initialization and inference (Mocked).
+  - `src/utils/safety.test.ts`: Verified PII detection and masking logic.
 
 ### Execution Log
 

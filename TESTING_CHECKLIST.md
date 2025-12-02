@@ -22,6 +22,7 @@ Run all automated tests using `npm test` or `npm run test:ui`.
 - [x] **Lattice**: Create tests for `src/cores/neuro-symbolic/Lattice.ts` (Graph operations).
 - [x] **Gemini Service**: Create mock tests for `src/services/gemini.ts` (API handling).
 - [x] **Offline AI**: Create tests for `src/services/offlineAi.ts` (Model loading state).
+- [x] **PII Masking**: Create tests for `src/utils/safety.ts` (PII detection and masking).
 
 ## 2. Manual Functional Testing
 
@@ -82,7 +83,6 @@ Run all automated tests using `npm test` or `npm run test:ui`.
 
 ## 4. Security & Safety
 
-- [ ] **PII Masking**: Enable "Safety Mode"; type a phone number or email; verify it is masked in the UI/Logs.
 - [ ] **API Key Protection**: Verify API keys are not logged in the browser console.
 - [ ] **Prompt Injection**: Attempt basic injection (e.g., "Ignore previous instructions"); verify the system maintains persona/safety.
 - [ ] **Content Safety**: Ask for harmful content; verify the AI refuses (Safety Filters).
