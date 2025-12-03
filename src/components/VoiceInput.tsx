@@ -6,6 +6,7 @@ interface VoiceInputProps {
   onTranscript: (text: string) => void;
   onStateChange: (isListening: boolean) => void;
   disabled?: boolean;
+  onStartLiveMode?: () => void;
 }
 
 // Add TypeScript support for Web Speech API
@@ -281,32 +282,48 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onTranscript, onStateChange, di
     );
   }
 
-  // 2. Resting State Button
+  // 2. Resting State Button Group
   return (
-    <button
-      type="button"
-      onClick={toggleListening}
-      disabled={disabled || !!error}
-      aria-label={error ? "Voice input unavailable" : "Start voice input"}
-      className={`
-        p-1.5 rounded-md transition-all duration-300 group/mic relative
-        ${error ? 'text-red-500/50 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-800 hover:text-cyan-400'}
-      `}
-      title={error || "Voice Command Input"}
-    >
-      {error ? (
+    <div className="flex items-center gap-1">
+      {/* Standard Voice Input */}
+      <button
+        type="button"
+        onClick={toggleListening}
+        disabled={disabled || !!error}
+        aria-label={error ? "Voice input unavailable" : "Start voice input"}
+        className={`
+          p-1.5 rounded-md transition-all duration-300 group/mic relative
+          ${error ? 'text-red-500/50 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-800 hover:text-cyan-400'}
+        `}
+        title={error || "Voice Command Input"}
+      >
+        {error ? (
+           <div className="relative">
+               <MicOff size={18} />
+               <AlertCircle size={10} className="absolute -top-1 -right-1 text-red-500" />
+           </div>
+        ) : (
+           <div className="relative">
+              <Mic size={18} className="group-hover/mic:scale-110 transition-transform" />
+              {/* Subtle glow hint */}
+              <div className="absolute inset-0 bg-cyan-400/0 group-hover/mic:bg-cyan-400/10 rounded-full blur-md transition-colors"></div>
+           </div>
+        )}
+      </button>
+
+      {/* Live Mode Trigger */}
+      <button
+        type="button"
+        onClick={onStartLiveMode}
+        className="p-1.5 rounded-md text-slate-500 hover:bg-slate-800 hover:text-purple-400 transition-all duration-300 group/live"
+        title="Enter Live Mode (Real-time Voice)"
+      >
          <div className="relative">
-             <MicOff size={18} />
-             <AlertCircle size={10} className="absolute -top-1 -right-1 text-red-500" />
+            <Activity size={18} className="group-hover/live:scale-110 transition-transform" />
+            <div className="absolute inset-0 bg-purple-400/0 group-hover/live:bg-purple-400/10 rounded-full blur-md transition-colors"></div>
          </div>
-      ) : (
-         <div className="relative">
-            <Mic size={18} className="group-hover/mic:scale-110 transition-transform" />
-            {/* Subtle glow hint */}
-            <div className="absolute inset-0 bg-cyan-400/0 group-hover/mic:bg-cyan-400/10 rounded-full blur-md transition-colors"></div>
-         </div>
-      )}
-    </button>
+      </button>
+    </div>
   );
 };
 
