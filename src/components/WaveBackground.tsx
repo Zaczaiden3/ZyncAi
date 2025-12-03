@@ -108,4 +108,4 @@ const WaveBackground: React.FC<Props> = ({ isActive }) => {
   );
 };
 
-export default WaveBackground;
+export default React.memo(WaveBackground);
