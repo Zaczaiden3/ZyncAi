@@ -153,5 +153,12 @@
   - [x] Replace static logo with vector `ZyncLogo` component.
 
 - [x] **Health Check**
+
   - [x] Run `npm run test` (All tests passing).
   - [x] Run `npm run lint` (No issues found).
+
+- [x] **Feature Access**
+  - [x] Add `Experiment Lab` to Command Palette.
+  - [x] Add `Memory Inspector` to Command Palette.
+  - [x] Add `Dream State` toggle to Command Palette.
+  - [x] Verify component functionality with new unit tests.
