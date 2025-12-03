@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Check, ArrowRight, Mail, Lock, User, Github, Shield } from 'lucide-react';
 import { loginUser, registerUser } from '../services/auth';
-import zyncLogo from '@/assets/logo.png';
+import ZyncLogo from './ZyncLogo';
 import './LoginPage.css';
 
 interface LoginPageProps {
@@ -109,7 +109,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGlitch }) => {
             <div className="mb-12 text-center">
                 <div className="inline-block relative group cursor-default">
                     <div className="absolute -inset-4 bg-gradient-to-r from-fuchsia-500/20 to-cyan-500/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    <img src={zyncLogo} alt="ZyncAI" className="h-12 w-auto object-contain relative z-10 logo-glow" />
+                    <ZyncLogo className="h-12 w-auto relative z-10 logo-glow" animated={true} />
                 </div>
                 <p className="text-sm text-slate-400 mt-4 font-light tracking-wide">
                     {mode === 'signin' ? 'Welcome back to the flow.' : 'Join the neural network.'}

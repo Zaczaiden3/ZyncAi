@@ -13,8 +13,7 @@ const ZyncLogo: React.FC<ZyncLogoProps> = ({ className = "h-10 w-auto", showText
         viewBox="0 0 100 100" 
         fill="none" 
         xmlns="http://www.w3.org/2000/svg"
-        className={`w-full h-full ${animated ? 'animate-pulse-slow' : ''}`}
-        style={{ maxHeight: '100%' }}
+        className={`w-full h-full ${animated ? 'animate-pulse-slow' : ''} max-h-full`}
       >
         <defs>
           <linearGradient id="zync-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -38,8 +37,8 @@ const ZyncLogo: React.FC<ZyncLogoProps> = ({ className = "h-10 w-auto", showText
         />
         
         {/* Tech Accents */}
-        <circle cx="75" cy="30" r="6" fill="#d946ef" className={animated ? "animate-ping" : ""} style={{ animationDuration: '3s' }} />
-        <circle cx="20" cy="70" r="6" fill="#06b6d4" className={animated ? "animate-ping" : ""} style={{ animationDuration: '3s', animationDelay: '1.5s' }} />
+        <circle cx="75" cy="30" r="6" fill="#d946ef" className={animated ? "animate-ping-slow" : ""} />
+        <circle cx="20" cy="70" r="6" fill="#06b6d4" className={animated ? "animate-ping-slow-delayed" : ""} />
       </svg>
       
       {showText && (
