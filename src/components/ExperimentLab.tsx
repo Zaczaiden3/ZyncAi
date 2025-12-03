@@ -150,87 +150,91 @@ const ExperimentLab: React.FC<ExperimentLabProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-7xl h-[90vh] bg-slate-900 border border-slate-700 rounded-lg shadow-2xl flex overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+      <div className="w-full max-w-7xl h-[90vh] glass-panel rounded-xl shadow-2xl flex overflow-hidden relative">
         
         {/* Sidebar: Personas */}
-        <div className="w-1/4 border-r border-slate-700 flex flex-col bg-slate-900/50">
-          <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-            <h2 className="text-sm font-mono font-bold text-fuchsia-500 flex items-center gap-2">
+        <div className="w-1/4 border-r border-white/10 flex flex-col bg-black/20">
+          <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+            <h2 className="text-sm font-mono font-bold text-fuchsia-400 flex items-center gap-2 tracking-wider">
               <FlaskConical size={16} /> EXPERIMENT_LAB
             </h2>
             <button 
               onClick={() => setEditingPersona({ id: `p-${Date.now()}`, name: 'New Persona', systemPrompt: '' })}
-              className="text-slate-400 hover:text-fuchsia-400"
+              className="text-slate-400 hover:text-fuchsia-400 transition-colors p-1 hover:bg-white/5 rounded"
               title="Add Persona"
             >
               <Plus size={18} />
             </button>
           </div>
           
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
             {personas.map(p => (
               <div 
                 key={p.id}
-                className={`p-3 rounded border cursor-pointer transition-all ${selectedPersonas.has(p.id) ? 'bg-fuchsia-500/10 border-fuchsia-500/50' : 'bg-slate-800/30 border-slate-700 hover:border-slate-600'}`}
+                className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer group ${
+                  selectedPersonas.has(p.id) 
+                    ? 'bg-fuchsia-500/10 border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.1)]' 
+                    : 'bg-white/5 border-transparent hover:border-white/10 hover:bg-white/10'
+                }`}
                 onClick={() => togglePersonaSelection(p.id)}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <span className="text-xs font-bold text-slate-200">{p.name}</span>
-                  <div className="flex gap-1">
+                  <span className={`text-xs font-bold transition-colors ${selectedPersonas.has(p.id) ? 'text-fuchsia-300' : 'text-slate-300 group-hover:text-slate-200'}`}>
+                    {p.name}
+                  </span>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={(e) => { e.stopPropagation(); setEditingPersona(p); }}
-                      className="text-slate-500 hover:text-cyan-400"
+                      className="text-slate-500 hover:text-cyan-400 p-1 hover:bg-white/10 rounded"
                       title="Edit Persona"
-                      aria-label="Edit Persona"
                     >
                       <MessageSquare size={12} />
                     </button>
                     <button 
                       onClick={(e) => { e.stopPropagation(); deletePersona(p.id); }}
-                      className="text-slate-500 hover:text-red-400"
+                      className="text-slate-500 hover:text-red-400 p-1 hover:bg-white/10 rounded"
                       title="Delete Persona"
-                      aria-label="Delete Persona"
                     >
                       <Trash2 size={12} />
                     </button>
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-500 line-clamp-2 font-mono">{p.systemPrompt}</p>
+                <p className="text-[10px] text-slate-500 line-clamp-2 font-mono leading-relaxed">{p.systemPrompt}</p>
               </div>
             ))}
           </div>
         </div>
 
         {/* Main Area */}
-        <div className="flex-1 flex flex-col bg-slate-950">
+        <div className="flex-1 flex flex-col bg-transparent relative">
+          {/* Background Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-900/5 via-transparent to-cyan-900/5 pointer-events-none" />
+
           {/* Header & Controls */}
-          <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+          <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5 backdrop-blur-md z-10">
             <div className="flex-1 mr-4">
                <input 
                 type="text" 
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 placeholder="Enter test prompt here..."
-                aria-label="Test Prompt Input"
-                className="w-full bg-slate-900 border border-slate-700 rounded px-4 py-2 text-sm text-slate-200 focus:border-fuchsia-500 outline-none font-mono"
+                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:border-fuchsia-500/50 focus:bg-black/40 focus:shadow-[0_0_15px_rgba(217,70,239,0.1)] outline-none font-mono transition-all placeholder:text-slate-600"
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleRunExperiment()}
                />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
                 <button 
                     onClick={handleRunExperiment}
                     disabled={isRunning || !prompt.trim() || selectedPersonas.size === 0}
-                    className="px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs font-mono flex items-center gap-2"
-                    title="Run Experiment"
+                    className="px-5 py-2.5 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-mono flex items-center gap-2 shadow-lg shadow-fuchsia-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                     {isRunning ? <ActivityIcon /> : <Play size={16} />} RUN_TEST
                 </button>
                 <button 
                     onClick={onClose} 
-                    className="p-2 text-slate-500 hover:text-red-400"
+                    className="p-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                     title="Close Experiment Lab"
-                    aria-label="Close Experiment Lab"
                 >
                     <X size={20} />
                 </button>
@@ -238,40 +242,50 @@ const ExperimentLab: React.FC<ExperimentLabProps> = ({ onClose }) => {
           </div>
 
           {/* Results Grid */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 z-0">
             {results.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-700">
-                    <FlaskConical size={64} className="mb-4 opacity-20" />
-                    <p className="font-mono text-sm">SELECT PERSONAS AND RUN A PROMPT</p>
+                <div className="h-full flex flex-col items-center justify-center text-slate-600">
+                    <div className="p-6 rounded-full bg-white/5 mb-4 border border-white/5">
+                        <FlaskConical size={48} className="opacity-40 text-fuchsia-500" />
+                    </div>
+                    <p className="font-mono text-sm tracking-wide">SELECT PERSONAS AND RUN A PROMPT</p>
                 </div>
             ) : (
-                <div className={`grid gap-4 ${results.length === 1 ? 'grid-cols-1' : results.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                <div className={`grid gap-6 ${results.length === 1 ? 'grid-cols-1' : results.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                     {results.map(r => (
-                        <div key={r.personaId} className="bg-slate-900 border border-slate-800 rounded-lg flex flex-col h-[60vh]">
-                            <div className="p-3 border-b border-slate-800 bg-slate-800/30 flex justify-between items-center">
-                                <span className="text-xs font-bold text-fuchsia-400">{r.personaName}</span>
-                                <div className="flex items-center gap-2">
+                        <div key={r.personaId} className="glass-panel bg-black/40 border-white/5 rounded-xl flex flex-col h-[60vh] overflow-hidden hover:border-white/10 transition-colors">
+                            <div className="p-3 border-b border-white/5 bg-white/5 flex justify-between items-center">
+                                <span className="text-xs font-bold text-fuchsia-400 font-mono">{r.personaName}</span>
+                                <div className="flex items-center gap-3">
                                     <span className="text-[10px] font-mono text-slate-500">{r.latency}ms</span>
-                                    <div className="flex gap-1 ml-2 pl-2 border-l border-slate-700">
+                                    <div className="flex gap-1 pl-3 border-l border-white/10">
                                         <button 
                                             onClick={() => handleRateResult(r.personaId, 'up')}
-                                            className={`p-1 rounded hover:bg-white/5 ${r.rating === 'up' ? 'text-green-400' : 'text-slate-500 hover:text-green-300'}`}
-                                            title="Good Response"
+                                            className={`p-1.5 rounded hover:bg-white/10 transition-colors ${r.rating === 'up' ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-500 hover:text-emerald-300'}`}
+                                            title="Rate Good"
+                                            aria-label="Rate Good"
                                         >
                                             <ThumbsUp size={12} />
                                         </button>
                                         <button 
                                             onClick={() => handleRateResult(r.personaId, 'down')}
-                                            className={`p-1 rounded hover:bg-white/5 ${r.rating === 'down' ? 'text-red-400' : 'text-slate-500 hover:text-red-300'}`}
-                                            title="Bad Response"
+                                            className={`p-1.5 rounded hover:bg-white/10 transition-colors ${r.rating === 'down' ? 'text-red-400 bg-red-500/10' : 'text-slate-500 hover:text-red-300'}`}
+                                            title="Rate Bad"
+                                            aria-label="Rate Bad"
                                         >
                                             <ThumbsDown size={12} />
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex-1 p-4 overflow-y-auto custom-scrollbar text-sm text-slate-300 whitespace-pre-wrap font-sans leading-relaxed">
-                                {r.output || <span className="animate-pulse text-slate-600">...</span>}
+                            <div className="flex-1 p-4 overflow-y-auto custom-scrollbar text-sm text-slate-300 whitespace-pre-wrap font-sans leading-relaxed selection:bg-fuchsia-500/30">
+                                {r.output || (
+                                    <div className="flex items-center gap-2 text-slate-500 animate-pulse">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500"></span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 animation-delay-200"></span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 animation-delay-400"></span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -282,44 +296,48 @@ const ExperimentLab: React.FC<ExperimentLabProps> = ({ onClose }) => {
 
         {/* Edit Modal */}
         {editingPersona && (
-            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50">
-                <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 w-full max-w-lg shadow-2xl">
-                    <h3 className="text-sm font-mono font-bold text-slate-200 mb-4">EDIT_PERSONA</h3>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+                <div className="glass-panel bg-[#0f0720] border-white/10 rounded-xl p-6 w-full max-w-lg shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                    <h3 className="text-sm font-mono font-bold text-slate-200 mb-6 flex items-center gap-2">
+                        <MessageSquare size={16} className="text-cyan-400" /> EDIT_PERSONA
+                    </h3>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                         <div>
-                            <label className="block text-xs font-mono text-slate-500 mb-1">NAME</label>
+                            <label className="block text-[10px] font-mono text-slate-500 mb-1.5 uppercase tracking-wider">Name</label>
                             <input 
                                 type="text" 
                                 value={editingPersona.name}
                                 onChange={e => setEditingPersona({...editingPersona, name: e.target.value})}
+                                className="w-full bg-black/20 border border-white/10 rounded-lg p-2.5 text-sm text-slate-200 focus:border-cyan-500/50 focus:bg-black/40 outline-none transition-all"
                                 aria-label="Persona Name"
-                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-slate-200 focus:border-fuchsia-500 outline-none"
+                                placeholder="Enter persona name"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-mono text-slate-500 mb-1">SYSTEM_PROMPT</label>
+                            <label className="block text-[10px] font-mono text-slate-500 mb-1.5 uppercase tracking-wider">System Prompt</label>
                             <textarea 
                                 value={editingPersona.systemPrompt}
                                 onChange={e => setEditingPersona({...editingPersona, systemPrompt: e.target.value})}
+                                className="w-full bg-black/20 border border-white/10 rounded-lg p-2.5 text-sm text-slate-200 focus:border-cyan-500/50 focus:bg-black/40 outline-none h-40 font-mono text-xs resize-none custom-scrollbar transition-all"
                                 aria-label="System Prompt"
-                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-slate-200 focus:border-fuchsia-500 outline-none h-40 font-mono text-xs"
+                                placeholder="Enter system prompt"
                             />
                         </div>
                     </div>
 
-                    <div className="mt-6 flex justify-end gap-3">
+                    <div className="mt-8 flex justify-end gap-3">
                         <button 
                             onClick={() => setEditingPersona(null)}
-                            className="px-4 py-2 text-xs font-mono text-slate-400 hover:text-slate-200"
+                            className="px-4 py-2 text-xs font-mono text-slate-400 hover:text-white transition-colors"
                         >
                             CANCEL
                         </button>
                         <button 
                             onClick={() => savePersona(editingPersona)}
-                            className="px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded text-xs font-mono flex items-center gap-2"
+                            className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-mono flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all hover:scale-105"
                         >
-                            <Save size={14} /> SAVE
+                            <Save size={14} /> SAVE_CHANGES
                         </button>
                     </div>
                 </div>

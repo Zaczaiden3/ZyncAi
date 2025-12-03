@@ -159,6 +159,7 @@
 
 - [x] **Feature Access**
   - [x] Add `Experiment Lab` to Command Palette.
+  - [x] Enhance `Experiment Lab` UI to match Wafe design.
   - [x] Add `Memory Inspector` to Command Palette.
   - [x] Add `Dream State` toggle to Command Palette.
   - [x] Verify component functionality with new unit tests.
