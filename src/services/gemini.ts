@@ -796,6 +796,17 @@ export async function* generateConsensusRecoveryStream(
                 const parsed = JSON.parse(jsonMatch[0]);
                 if (parsed.error && parsed.error.message) {
                     displayError = parsed.error.message;
+                    // Try to parse nested JSON message
+                    if (typeof displayError === 'string' && displayError.trim().startsWith('{')) {
+                        try {
+                            const nestedParsed = JSON.parse(displayError);
+                            if (nestedParsed.error && nestedParsed.error.message) {
+                                displayError = nestedParsed.error.message;
+                            }
+                        } catch (innerE) {
+                            // ignore inner parsing error
+                        }
+                    }
                 }
             }
         } catch (e) {

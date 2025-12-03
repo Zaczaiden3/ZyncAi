@@ -103,6 +103,24 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({ onClose }) => {
             />
           </div>
 
+          {/* Auto-Read Toggle */}
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-mono text-cyan-400 uppercase tracking-wider">Auto-Read Responses</label>
+            <button
+                onClick={() => updateSettings({ autoRead: !settings.autoRead })}
+                aria-label={settings.autoRead ? "Disable auto-read" : "Enable auto-read"}
+                className={`
+                    w-10 h-5 rounded-full relative transition-colors duration-200
+                    ${settings.autoRead ? 'bg-cyan-500' : 'bg-slate-700'}
+                `}
+            >
+                <div className={`
+                    absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform duration-200
+                    ${settings.autoRead ? 'translate-x-5' : 'translate-x-0'}
+                `} />
+            </button>
+          </div>
+
           {/* Test Button */}
           <div className="pt-4 flex justify-end">
             <button 

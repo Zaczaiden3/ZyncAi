@@ -171,6 +171,7 @@
   - [x] Implement `React.memo` for `SystemVisualizer` and `CommandPalette` to prevent unnecessary re-renders.
   - [x] Wrap event handlers in `useCallback` in `App.tsx`.
   - [x] Verify build and lint status after optimizations.
+  - [x] **Voice I/O Enhancement**: Added auto-read responses, voice input cancellation, and improved voice settings.
 
 - [ ] **Final Polish**
   - [ ] Conduct final end-to-end manual testing.

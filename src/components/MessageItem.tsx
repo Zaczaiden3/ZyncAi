@@ -45,6 +45,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     // In a real app, we'd emit an event here
   };
 
+  const isError = message.text?.includes('**Configuration Error**') || message.text?.includes('**System Critical**');
+
   return (
     <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
       <div className={`flex max-w-[95%] md:max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-3 md:gap-4`}>
@@ -62,7 +64,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           {isReflex && <Zap size={16} className="md:w-5 md:h-5" />}
           {isMemory && <BrainCircuit size={16} className="md:w-5 md:h-5" />}
           {isNeuro && <Network size={16} className="md:w-5 md:h-5" />}
-          {isConsensus && <ShieldAlert size={16} className="md:w-5 md:h-5" />}
+          {isConsensus && !isError && <ShieldAlert size={16} className="md:w-5 md:h-5" />}
+          {isError && <ShieldAlert size={16} className="md:w-5 md:h-5" />}
         </div>
 
         {/* Content */}
@@ -73,7 +76,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             <span className={`font-bold ${
               isReflex ? 'text-cyan-400' : isMemory ? 'text-fuchsia-400' : isNeuro ? 'text-emerald-400' : isConsensus ? 'text-amber-400' : 'text-slate-400'
             }`}>
-              {isReflex ? 'REFLEX CORE' : isMemory ? 'MEMORY CORE' : isNeuro ? 'NEURO-SYMBOLIC CORE' : isConsensus ? 'CONSENSUS PROTOCOL' : 'USER_CMD'}
+              {isError ? 'SYSTEM ALERT' : 
+               isReflex ? 'REFLEX CORE' : isMemory ? 'MEMORY CORE' : isNeuro ? 'NEURO-SYMBOLIC CORE' : isConsensus ? 'CONSENSUS PROTOCOL' : 'USER_CMD'}
             </span>
             {message.metrics && (
               <>

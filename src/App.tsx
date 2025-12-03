@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { SpeechProvider, useSpeechContext } from './contexts/SpeechContext';
+import { useTextToSpeech } from './hooks/useTextToSpeech';
 import { Volume2, VolumeX, Send, Activity, Terminal, Command, Menu, ArrowDown, Paperclip, ImageIcon, Trash2, RefreshCw, Download, Lock, Network, Users, Plus, FileJson, Layers, Edit3, Settings, Moon, Sun, Code, FlaskConical } from 'lucide-react';
 import { dreamService } from './services/dreamService';
 import { AIRole, Message, SystemStats, WorkflowExecutionLog, Workflow } from './types';
@@ -125,6 +126,9 @@ function App() {
 
   // Voice Input State
   const [isListening, setIsListening] = useState(false);
+  const { speak, cancel: cancelTTS, isSpeaking: isTTSSpeaking, voices: ttsVoices } = useTextToSpeech();
+  const { settings: voiceSettings, isMuted: isVoiceMuted } = useSpeechContext();
+  const lastReadMessageId = useRef<string | null>(null);
 
   // Neuro-Symbolic State
   const [neuroTrace, setNeuroTrace] = useState<string | null>(null);
@@ -212,6 +216,28 @@ function App() {
     neuroConfidence: 95,
     currentTask: 'SYSTEM_IDLE'
   });
+
+  // Auto-Read Effect
+  useEffect(() => {
+    if (!voiceSettings.autoRead || isVoiceMuted) return;
+
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg || lastMsg.role === AIRole.USER) return;
+
+    // Only read if system is idle (generation complete) and we haven't read this message yet
+    if (systemStats.currentTask === 'SYSTEM_IDLE' && lastMsg.id !== lastReadMessageId.current) {
+        lastReadMessageId.current = lastMsg.id;
+        
+        const selectedVoice = ttsVoices.find(v => v.voiceURI === voiceSettings.voiceURI);
+        
+        speak(lastMsg.text, {
+            voice: selectedVoice,
+            rate: voiceSettings.rate,
+            pitch: voiceSettings.pitch,
+            volume: voiceSettings.volume
+        });
+    }
+  }, [messages, systemStats.currentTask, voiceSettings, isVoiceMuted, speak, ttsVoices]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);

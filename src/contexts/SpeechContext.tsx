@@ -5,6 +5,7 @@ interface VoiceSettings {
   rate: number;
   pitch: number;
   volume: number;
+  autoRead: boolean;
 }
 
 interface SpeechContextType {
@@ -26,7 +27,7 @@ export const SpeechProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [settings, setSettings] = useState<VoiceSettings>(() => {
     const saved = localStorage.getItem('ZYNC_VOICE_SETTINGS');
-    return saved ? JSON.parse(saved) : { voiceURI: null, rate: 1, pitch: 1, volume: 1 };
+    return saved ? JSON.parse(saved) : { voiceURI: null, rate: 1, pitch: 1, volume: 1, autoRead: false };
   });
 
   useEffect(() => {

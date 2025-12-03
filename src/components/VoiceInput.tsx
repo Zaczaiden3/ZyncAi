@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { Mic, MicOff, Activity, X, Check, AlertCircle } from 'lucide-react';
 
 interface VoiceInputProps {
@@ -19,6 +20,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onTranscript, onStateChange, di
   const [isListening, setIsListening] = useState(false);
   const [interimText, setInterimText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const { cancel } = useTextToSpeech();
   
   const recognitionRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,6 +87,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onTranscript, onStateChange, di
         setIsListening(true);
         onStateChange(true);
         setError(null);
+        cancel();
         startVisualization();
       };
 
