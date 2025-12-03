@@ -498,17 +498,10 @@ function App() {
     setMessages([
       {
         id: 'init-1',
-        role: AIRole.REFLEX,
-        text: 'Zync Reflex Core Online. Rapid data streams active.',
+        role: AIRole.CONSENSUS,
+        text: '# Welcome to Zync AI\n\nYour advanced AI workspace is ready.\n\n### Features Active:\n- **Reflex Core**: High-speed tactical response.\n- **Memory Core**: Deep contextual analysis & long-term recall.\n- **Neuro-Symbolic Lattice**: Graph-based reasoning engine.\n- **Agentic Workflows**: Autonomous multi-step task execution.\n\n*System is operating in Safe Mode (Gemini Fallback) for maximum reliability.*',
         timestamp: Date.now(),
-        metrics: { latency: 12, tokens: 45, confidence: 99 }
-      },
-      {
-        id: 'init-2',
-        role: AIRole.MEMORY,
-        text: 'Zync Memory Core Synchronized. Cognitive Core Upgrade: Contextual Synthesis Active. Developmental Process Framework loaded.',
-        timestamp: Date.now(),
-        metrics: { latency: 45, tokens: 120, confidence: 98 }
+        metrics: { latency: 12, tokens: 45, confidence: 100 }
       }
     ]);
     setSystemStats({

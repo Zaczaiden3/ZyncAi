@@ -570,8 +570,12 @@ export async function* generateMemoryAnalysisStream(
       if (!openRouterKey) {
            console.warn(`Missing API Key for ${memoryModel}. Falling back to Gemini.`);
       } else {
-        yield* streamOpenRouter(memoryModel, messages, openRouterKey);
-        return;
+        try {
+            yield* streamOpenRouter(memoryModel, messages, openRouterKey);
+            return;
+        } catch (e) {
+            console.warn(`OpenRouter (${memoryModel}) failed, falling back to Gemini`, e);
+        }
       }
   }
 
