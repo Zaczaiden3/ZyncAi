@@ -1532,7 +1532,7 @@ function App() {
         <div className="p-4 md:p-8 z-40 relative">
           <div className="max-w-4xl mx-auto relative">
             {/* Input Island Container */}
-            <div className={`input-island rounded-2xl p-2 ${!isReflexActive && !isMemoryActive && !isListening ? 'animate-breathing-glow' : ''}`}>
+            <div className={`input-island rounded-[2rem] p-1.5 border border-slate-700/50 bg-slate-900/50 backdrop-blur-xl transition-all duration-300 ${!isReflexActive && !isMemoryActive && !isListening ? 'hover:border-cyan-500/30 hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.15)]' : ''}`}>
             
             <form onSubmit={handleSendMessage} className="relative group">
                 
@@ -1575,7 +1575,7 @@ function App() {
                   aria-label="Upload file"
                 />
 
-                <div className="absolute inset-y-0 left-3 md:left-5 flex items-center gap-2">
+                <div className="absolute inset-y-0 left-4 flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => setIsPaletteOpen(true)}
@@ -1631,9 +1631,9 @@ function App() {
                 type="submit"
                 aria-label="Send message"
                 disabled={(!input.trim() && !selectedImage) || isReflexActive || isMemoryActive || isListening}
-                className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-slate-800 text-slate-400 
-                          hover:bg-cyan-500 hover:text-white disabled:opacity-30 disabled:hover:bg-slate-800 disabled:hover:text-slate-400
-                          transition-all duration-200 shadow-lg interactive-hover"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white 
+                          hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500
+                          transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:scale-105 active:scale-95"
               >
                 <Send size={18} />
               </button>
