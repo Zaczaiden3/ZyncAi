@@ -292,7 +292,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onTranscript, onStateChange, di
         disabled={disabled || !!error}
         aria-label={error ? "Voice input unavailable" : "Start voice input"}
         className={`
-          p-1.5 rounded-md transition-all duration-300 group/mic relative
+          p-2 rounded-full transition-all duration-300 group/mic relative
           ${error ? 'text-red-500/50 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-800 hover:text-cyan-400'}
         `}
         title={error || "Voice Command Input"}
@@ -315,7 +315,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onTranscript, onStateChange, di
       <button
         type="button"
         onClick={onStartLiveMode}
-        className="p-1.5 rounded-md text-slate-500 hover:bg-slate-800 hover:text-purple-400 transition-all duration-300 group/live"
+        className="p-2 rounded-full text-slate-500 hover:bg-slate-800 hover:text-purple-400 transition-all duration-300 group/live"
         title="Enter Live Mode (Real-time Voice)"
       >
          <div className="relative">

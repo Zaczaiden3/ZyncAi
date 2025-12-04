@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { SpeechProvider, useSpeechContext } from './contexts/SpeechContext';
 import { useTextToSpeech } from './hooks/useTextToSpeech';
-import { Volume2, VolumeX, Send, Activity, Terminal, Command, Menu, ArrowDown, Paperclip, ImageIcon, Trash2, RefreshCw, Download, Lock, Network, Users, Plus, FileJson, Layers, Edit3, Settings, Moon, Sun, Code, FlaskConical } from 'lucide-react';
+import { Volume2, VolumeX, Send, Activity, Terminal, Command, Menu, ArrowDown, Paperclip, ImageIcon, Trash2, RefreshCw, Download, Lock, Network, Users, Plus, FileJson, Layers, Edit3, Settings, Moon, Sun, Code, FlaskConical, Sparkles } from 'lucide-react';
 import { dreamService } from './services/dreamService';
 import { AIRole, Message, SystemStats, WorkflowExecutionLog, Workflow } from './types';
 import { getSettings } from './services/settings';
@@ -1289,6 +1289,17 @@ function App() {
       description: 'Logout and return to secure gateway',
       icon: <Lock size={18} />,
       action: handleLogout,
+      category: 'System'
+    },
+    {
+      id: 'show-tour',
+      label: 'Show Welcome Tour',
+      description: 'Replay the onboarding introduction.',
+      icon: <Sparkles size={18} />,
+      action: () => {
+        setIsPaletteOpen(false);
+        setShowOnboarding(true);
+      },
       category: 'System'
     },
 

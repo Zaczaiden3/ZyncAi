@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronRight, ChevronLeft, Zap, Brain, FlaskConical, Settings } from 'lucide-react';
+import { X, ChevronRight, Zap, Brain, FlaskConical, Settings, Sparkles } from 'lucide-react';
 
 interface OnboardingTourProps {
   onComplete: () => void;
@@ -9,25 +9,25 @@ const STEPS = [
   {
     title: "Welcome to Zync AI",
     description: "Your advanced AI workspace for research, coding, and creative exploration. Zync combines multiple AI models into a single, cohesive interface.",
-    icon: <Zap size={48} className="text-cyan-400" />,
+    icon: <Zap size={32} className="text-cyan-400" />,
     image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1000&auto=format&fit=crop"
   },
   {
     title: "Dual Core Intelligence",
     description: "Zync operates with two primary cores: Reflex (Fast, Chat) and Memory (Deep Reasoning). Switch between them based on your task complexity.",
-    icon: <Brain size={48} className="text-fuchsia-400" />,
+    icon: <Brain size={32} className="text-fuchsia-400" />,
     image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=1000&auto=format&fit=crop"
   },
   {
     title: "Experiment Lab",
     description: "Test different personas and prompts in parallel. Use the Flask icon in the header to access the Experiment Lab for rigorous testing.",
-    icon: <FlaskConical size={48} className="text-emerald-400" />,
+    icon: <FlaskConical size={32} className="text-emerald-400" />,
     image: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?q=80&w=1000&auto=format&fit=crop"
   },
   {
     title: "Customizable Settings",
     description: "Configure your API keys, choose your preferred models, and tweak the voice output settings in the new Settings Panel.",
-    icon: <Settings size={48} className="text-amber-400" />,
+    icon: <Settings size={32} className="text-amber-400" />,
     image: "https://images.unsplash.com/photo-1555421689-491a97ff2040?q=80&w=1000&auto=format&fit=crop"
   }
 ];
@@ -35,16 +35,21 @@ const STEPS = [
 const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [animatingStep, setAnimatingStep] = useState(false);
 
   useEffect(() => {
-    // Small delay for animation
-    const timer = setTimeout(() => setIsVisible(true), 500);
+    const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
-      setCurrentStep(prev => prev + 1);
+      setAnimatingStep(true);
+      setTimeout(() => {
+        setCurrentStep(prev => prev + 1);
+        setAnimatingStep(false);
+      }, 300);
     } else {
       handleComplete();
     }
@@ -52,92 +57,151 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
 
   const handlePrev = () => {
     if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
+      setAnimatingStep(true);
+      setTimeout(() => {
+        setCurrentStep(prev => prev - 1);
+        setAnimatingStep(false);
+      }, 300);
     }
   };
 
   const handleComplete = () => {
-    setIsVisible(false);
-    setTimeout(onComplete, 300); // Wait for animation
+    setIsExiting(true);
+    setTimeout(onComplete, 500);
   };
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-      <div className="w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[500px] relative">
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center transition-all duration-500 ${isVisible && !isExiting ? 'opacity-100 backdrop-blur-sm bg-black/60' : 'opacity-0 pointer-events-none'}`}>
+      <div 
+        className={`w-full max-w-4xl h-[550px] flex rounded-3xl overflow-hidden shadow-2xl relative transition-all duration-700 transform ${isVisible && !isExiting ? 'scale-100 translate-y-0' : 'scale-95 translate-y-8'}`}
+        style={{
+          background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+        }}
+      >
         
         <button 
             onClick={handleComplete}
-            className="absolute top-4 right-4 text-slate-500 hover:text-white z-10"
+            className="absolute top-6 right-6 text-slate-400 hover:text-white z-20 transition-colors p-2 hover:bg-white/10 rounded-full"
             title="Skip Tour"
         >
-            <X size={24} />
+            <X size={20} />
         </button>
 
-        {/* Image Section */}
-        <div className="w-full md:w-1/2 relative overflow-hidden bg-slate-950">
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent z-10"></div>
-            <img 
+        {/* Left Side - Image & Visuals */}
+        <div className="w-5/12 relative overflow-hidden bg-slate-900 hidden md:block group">
+            {/* Background Image with Transition */}
+            <div className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${animatingStep ? 'opacity-50' : 'opacity-100'}`}>
+               <img 
                 src={STEPS[currentStep].image} 
                 alt={STEPS[currentStep].title}
-                className="w-full h-full object-cover opacity-60 transition-all duration-500 transform hover:scale-105"
-            />
-            <div className="absolute bottom-8 left-8 z-20">
-                <div className="mb-4 p-3 bg-slate-900/50 backdrop-blur-md rounded-xl inline-block border border-slate-700/50">
+                className="w-full h-full object-cover opacity-80 transition-transform duration-[2000ms] ease-out transform group-hover:scale-110"
+               />
+            </div>
+            
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-90"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/20 to-slate-900/80"></div>
+
+            {/* Floating Icon */}
+            <div className="absolute bottom-10 left-10 z-20">
+                <div className={`p-4 bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-white/10 shadow-xl transition-all duration-500 transform ${animatingStep ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'}`}>
                     {STEPS[currentStep].icon}
                 </div>
             </div>
+            
+            {/* Decorative Elements */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+                <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute bottom-1/3 right-1/4 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+            </div>
         </div>
 
-        {/* Content Section */}
-        <div className="w-full md:w-1/2 p-8 flex flex-col justify-between bg-slate-900 relative">
-            <div className="absolute top-0 left-0 w-full h-1 bg-slate-800">
+        {/* Right Side - Content */}
+        <div className="w-full md:w-7/12 p-10 flex flex-col justify-between relative bg-slate-900/50 backdrop-blur-sm">
+            
+            {/* Progress Bar Top */}
+            <div className="w-full h-1 bg-slate-800/50 rounded-full mb-8 overflow-hidden">
                 <div 
-                    className={`h-full bg-cyan-500 transition-all duration-300 ease-out ${
-                        currentStep === 0 ? 'w-1/4' :
-                        currentStep === 1 ? 'w-1/2' :
-                        currentStep === 2 ? 'w-3/4' : 'w-full'
-                    }`}
+                    className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500 ease-out rounded-full"
+                    style={{ width: `${((currentStep + 1) / STEPS.length) * 100}%` }}
                 ></div>
             </div>
 
-            <div className="mt-8">
-                <h2 className="text-2xl font-bold text-white mb-4 font-mono">{STEPS[currentStep].title}</h2>
-                <p className="text-slate-400 leading-relaxed">
-                    {STEPS[currentStep].description}
-                </p>
+            <div className="flex-1 flex flex-col justify-center">
+                <div className={`transition-all duration-500 transform ${animatingStep ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'}`}>
+                    <div className="flex items-center gap-2 mb-4">
+                        <span className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-bold uppercase tracking-wider">
+                            Step {currentStep + 1} of {STEPS.length}
+                        </span>
+                        {currentStep === 0 && (
+                            <span className="flex items-center gap-1 text-amber-400 text-xs font-medium animate-pulse">
+                                <Sparkles size={12} /> New
+                            </span>
+                        )}
+                    </div>
+                    
+                    <h2 className="text-4xl font-bold text-white mb-6 leading-tight tracking-tight">
+                        {STEPS[currentStep].title}
+                    </h2>
+                    
+                    <p className="text-lg text-slate-400 leading-relaxed font-light">
+                        {STEPS[currentStep].description}
+                    </p>
+                </div>
             </div>
 
-            <div className="flex items-center justify-between mt-8">
+            {/* Footer Controls */}
+            <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/5">
+                {/* Dots */}
                 <div className="flex gap-2">
                     {STEPS.map((_, idx) => (
-                        <div 
+                        <button
                             key={idx}
-                            className={`w-2 h-2 rounded-full transition-colors ${idx === currentStep ? 'bg-cyan-500' : 'bg-slate-700'}`}
-                        ></div>
+                            onClick={() => {
+                                setAnimatingStep(true);
+                                setTimeout(() => {
+                                    setCurrentStep(idx);
+                                    setAnimatingStep(false);
+                                }, 300);
+                            }}
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                                idx === currentStep ? 'w-8 bg-cyan-500' : 'w-2 bg-slate-700 hover:bg-slate-600'
+                            }`}
+                            aria-label={`Go to step ${idx + 1}`}
+                        />
                     ))}
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                     {currentStep > 0 && (
                         <button 
                             onClick={handlePrev}
-                            className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors font-mono text-sm"
+                            className="px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all font-medium text-sm"
                         >
                             Back
                         </button>
                     )}
                     <button 
                         onClick={handleNext}
-                        className="px-6 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition-colors font-mono text-sm flex items-center gap-2"
+                        className="group relative px-8 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold transition-all shadow-lg shadow-cyan-900/20 hover:shadow-cyan-500/30 flex items-center gap-2 overflow-hidden"
                     >
-                        {currentStep === STEPS.length - 1 ? 'Get Started' : 'Next'}
-                        {currentStep < STEPS.length - 1 && <ChevronRight size={16} />}
+                        <span className="relative z-10 flex items-center gap-2">
+                            {currentStep === STEPS.length - 1 ? 'Get Started' : 'Next'}
+                            <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                        </span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
                     </button>
                 </div>
             </div>
         </div>
-
       </div>
+      
+      <style>{`
+        @keyframes shimmer {
+            100% { transform: translateX(100%); }
+        }
+      `}</style>
     </div>
   );
 };
