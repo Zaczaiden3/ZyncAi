@@ -1579,7 +1579,7 @@ function App() {
                     <button
                       type="button"
                       onClick={() => setIsPaletteOpen(true)}
-                      className="p-1.5 rounded-md transition-colors hover:bg-slate-800 text-slate-500 hover:text-cyan-400 group/cmd interactive-hover"
+                      className="p-2 rounded-full transition-colors hover:bg-slate-800 text-slate-500 hover:text-cyan-400 group/cmd interactive-hover"
                       title="Command Palette (Ctrl+K)"
                     >
                       <Command size={18} className="group-hover/cmd:scale-110 transition-transform" />
@@ -1591,7 +1591,7 @@ function App() {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isReflexActive || isMemoryActive}
-                      className={`p-1.5 rounded-md transition-colors hover:bg-slate-800 text-slate-500 hover:text-cyan-400`}
+                      className={`p-2 rounded-full transition-colors hover:bg-slate-800 text-slate-500 hover:text-cyan-400`}
                       title="Visual Input (Reflex Core)"
                     >
                        <ImageIcon size={18} />
@@ -1601,7 +1601,7 @@ function App() {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isReflexActive || isMemoryActive}
-                      className={`p-1.5 rounded-md transition-colors ${selectedImage ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-slate-800 text-slate-500 hover:text-slate-300'}`}
+                      className={`p-2 rounded-full transition-colors ${selectedImage ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-slate-800 text-slate-500 hover:text-slate-300'}`}
                       title="Attach File"
                     >
                        <Paperclip size={18} />
