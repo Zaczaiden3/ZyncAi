@@ -73,8 +73,12 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, comman
   useEffect(() => {
     if (listRef.current && isOpen) {
         const selectedElement = listRef.current.children[selectedIndex] as HTMLElement;
-        if (selectedElement) {
-            selectedElement.scrollIntoView({ block: 'nearest' });
+        if (selectedElement && typeof selectedElement.scrollIntoView === 'function') {
+            try {
+                selectedElement.scrollIntoView({ block: 'nearest' });
+            } catch (error) {
+                console.warn('Failed to scroll to element:', error);
+            }
         }
     }
   }, [selectedIndex, isOpen]);
