@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronRight, Zap, Brain, FlaskConical, Settings, Sparkles } from 'lucide-react';
+import './OnboardingTour.css';
 
 interface OnboardingTourProps {
   onComplete: () => void;
@@ -71,19 +72,21 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
   };
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center transition-all duration-500 ${isVisible && !isExiting ? 'opacity-100 backdrop-blur-sm bg-black/60' : 'opacity-0 pointer-events-none'}`}>
+    <div 
+      className={`fixed inset-0 z-[100] flex items-center justify-center transition-all duration-500 ${isVisible && !isExiting ? 'opacity-100 backdrop-blur-sm bg-black/60' : 'opacity-0 pointer-events-none'}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tour-title"
+    >
       <div 
-        className={`w-full max-w-4xl h-[550px] flex rounded-3xl overflow-hidden shadow-2xl relative transition-all duration-700 transform ${isVisible && !isExiting ? 'scale-100 translate-y-0' : 'scale-95 translate-y-8'}`}
-        style={{
-          background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
-        }}
+        className={`w-full max-w-4xl h-[550px] flex rounded-3xl overflow-hidden shadow-2xl relative transition-all duration-700 transform onboarding-modal ${isVisible && !isExiting ? 'scale-100 translate-y-0' : 'scale-95 translate-y-8'}`}
       >
         
         <button 
             onClick={handleComplete}
             className="absolute top-6 right-6 text-slate-400 hover:text-white z-20 transition-colors p-2 hover:bg-white/10 rounded-full"
             title="Skip Tour"
+            aria-label="Close tour"
         >
             <X size={20} />
         </button>
@@ -113,7 +116,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
             {/* Decorative Elements */}
             <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
                 <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-1/3 right-1/4 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+                <div className="absolute bottom-1/3 right-1/4 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl animate-pulse onboarding-decoration-delay"></div>
             </div>
         </div>
 
@@ -123,8 +126,8 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
             {/* Progress Bar Top */}
             <div className="w-full h-1 bg-slate-800/50 rounded-full mb-8 overflow-hidden">
                 <div 
-                    className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500 ease-out rounded-full"
-                    style={{ width: `${((currentStep + 1) / STEPS.length) * 100}%` }}
+                    className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500 ease-out rounded-full onboarding-progress-bar"
+                    style={{ '--progress-width': `${((currentStep + 1) / STEPS.length) * 100}%` } as React.CSSProperties}
                 ></div>
             </div>
 
@@ -141,7 +144,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
                         )}
                     </div>
                     
-                    <h2 className="text-4xl font-bold text-white mb-6 leading-tight tracking-tight">
+                    <h2 id="tour-title" className="text-4xl font-bold text-white mb-6 leading-tight tracking-tight">
                         {STEPS[currentStep].title}
                     </h2>
                     
@@ -190,18 +193,12 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
                             {currentStep === STEPS.length - 1 ? 'Get Started' : 'Next'}
                             <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
                         </span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer-slide"></div>
                     </button>
                 </div>
             </div>
         </div>
       </div>
-      
-      <style>{`
-        @keyframes shimmer {
-            100% { transform: translateX(100%); }
-        }
-      `}</style>
     </div>
   );
 };

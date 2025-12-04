@@ -173,6 +173,7 @@
   - [x] Verify build and lint status after optimizations.
   - [x] **Voice I/O Enhancement**: Added auto-read responses, voice input cancellation, and improved voice settings.
   - [x] **Real-time Voice Streaming**: Implemented Voice In + Voice Out using Gemini Multimodal Live API.
+  - [x] **Live Mode UI Overhaul**: Redesigned Live Voice Interface with immersive animations and futuristic visualizer.
 
 - [ ] **Final Polish**
   - [x] Conduct final end-to-end manual testing.
