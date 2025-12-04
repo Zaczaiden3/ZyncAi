@@ -1360,6 +1360,11 @@ function App() {
       <WaveBackground isActive={isReflexActive || isMemoryActive} />
       <div className="scanline-overlay"></div>
       {isExperimentLabOpen && <ExperimentLab onClose={() => setIsExperimentLabOpen(false)} />}
+      <CommandPalette 
+        isOpen={isPaletteOpen} 
+        onClose={() => setIsPaletteOpen(false)} 
+        commands={commands} 
+      />
       
       {/* Onboarding Tour */}
       {showOnboarding && (
@@ -1618,7 +1623,7 @@ function App() {
                 onPaste={handlePaste}
                 disabled={isReflexActive || isMemoryActive || isListening}
                 placeholder={isListening ? "" : (isReflexActive || isMemoryActive ? "Processing Neural Streams..." : "Input command (Voice/Image supported)...")}
-                className="w-full bg-transparent border-none py-3 md:py-4 pl-32 md:pl-40 pr-12 md:pr-16 
+                className="w-full bg-transparent border-none py-3 md:py-4 pl-40 md:pl-52 pr-12 md:pr-16 
                           text-slate-100 placeholder-slate-500 focus:ring-0
                           transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono text-base md:text-sm"
               />
