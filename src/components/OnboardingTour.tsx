@@ -126,8 +126,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
             {/* Progress Bar Top */}
             <div className="w-full h-1 bg-slate-800/50 rounded-full mb-8 overflow-hidden">
                 <div 
-                    className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500 ease-out rounded-full onboarding-progress-bar"
-                    style={{ '--progress-width': `${((currentStep + 1) / STEPS.length) * 100}%` } as React.CSSProperties}
+                    className={`h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500 ease-out rounded-full onboarding-progress-${Math.round(((currentStep + 1) / STEPS.length) * 100)}`}
                 ></div>
             </div>
 

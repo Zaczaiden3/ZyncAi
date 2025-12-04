@@ -11,6 +11,11 @@
   width: var(--progress-width, 0%);
 }
 
+.onboarding-progress-25 { width: 25%; }
+.onboarding-progress-50 { width: 50%; }
+.onboarding-progress-75 { width: 75%; }
+.onboarding-progress-100 { width: 100%; }
+
 @keyframes shimmer-slide {
   100% { transform: translateX(100%); }
 }
