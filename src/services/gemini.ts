@@ -5,6 +5,7 @@ import { pluginManager } from "./pluginManager";
 import { topologicalMemory } from '../cores/memory/TopologicalMemory';
 import { neuroSymbolicCore } from '../cores/neuro-symbolic/NeuroSymbolicCore';
 import { getSettings } from "./settings";
+import { AppError, ErrorType } from "../utils/errors";
 
 // Initialize the client helper
 const getAiClient = () => {
@@ -174,7 +175,7 @@ async function* streamOpenRouter(
 
   } catch (error) {
     console.error("OpenRouter Stream Error:", error);
-    throw error;
+    throw AppError.fromError(error);
   }
 }
 
@@ -464,7 +465,7 @@ export async function* generateReflexResponseStream(
 
   } catch (error) {
     console.error("Reflex Stream Error:", error);
-    throw error;
+    throw AppError.fromError(error);
   }
 }
 
@@ -698,7 +699,7 @@ export async function* generateMemoryAnalysisStream(
 
   } catch (error) {
     console.error("Memory Stream Error:", error);
-    throw error;
+    throw AppError.fromError(error);
   }
 }
 

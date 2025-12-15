@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { SpeechProvider, useSpeechContext } from './contexts/SpeechContext';
+import { useToast } from './contexts/ToastContext';
+import { AppError, ErrorSeverity } from './utils/errors';
 import { useTextToSpeech } from './hooks/useTextToSpeech';
 import { Volume2, VolumeX, Send, Activity, Terminal, Command, Menu, ArrowDown, Paperclip, ImageIcon, Trash2, RefreshCw, Download, Lock, Network, Users, Plus, FileJson, Layers, Edit3, Settings, Moon, Sun, Code, FlaskConical, Sparkles } from 'lucide-react';
 import { dreamService } from './services/dreamService';
@@ -44,6 +46,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('ZYNC_AUTH_STATE') === 'true';
   });
+  const { addToast } = useToast();
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges((user) => {
@@ -567,6 +570,7 @@ function App() {
         } : m));
     } catch (error) {
         console.error("Simulation Error:", error);
+        addToast("Failed to start persona simulation.", 'error');
         return;
     }
 
@@ -625,6 +629,7 @@ function App() {
             ...m,
             text: m.text + "\n\n**[SYSTEM ERROR]**: Debate protocol terminated unexpectedly."
         } : m));
+        addToast("Consensus debate failed.", 'error');
     } finally {
         setIsConsensusActive(false);
     }
@@ -638,6 +643,7 @@ function App() {
       setMessages([]);
     } catch (error) {
       console.error("Logout failed:", error);
+      addToast("Logout failed. Please try again.", 'error');
     }
   }, []);
 
@@ -1038,6 +1044,13 @@ function App() {
 
     } catch (error) {
       console.error("Critical Failure:", error);
+      if (error instanceof AppError && error.isUserVisible) {
+          const toastType = error.severity === ErrorSeverity.CRITICAL ? 'error' : 
+                           error.severity === ErrorSeverity.WARNING ? 'warning' : 'info';
+          addToast(error.message, toastType);
+      } else {
+          addToast("An unexpected error occurred. Initiating recovery protocol.", 'error');
+      }
       setIsReflexActive(false);
       setIsMemoryActive(false);
       setSystemStats(prev => ({ ...prev, currentTask: 'PROTOCOL_FAILURE_RECOVERY' }));
