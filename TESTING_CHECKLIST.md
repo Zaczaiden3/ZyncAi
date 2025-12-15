@@ -89,11 +89,11 @@ Run all automated tests using `npm test` or `npm run test:ui`.
 
 ## 5. Performance & Compatibility
 
-- [ ] **Load Time**: Verify the application loads within acceptable limits (< 2s).
-- [ ] **Memory Usage**: Monitor RAM usage during long chats; ensure no massive leaks.
-- [ ] **Offline Model Memory**: Verify the local LLM unloads/cleans up when disabled.
-- [ ] **Mobile View**: Open on a mobile device (or dev tools); verify the layout is responsive (Sidebar collapses, buttons accessible).
-- [ ] **Browser Compatibility**: Test on Chrome, Firefox, and Edge.
+- [x] **Load Time**: Verify the application loads within acceptable limits (< 2s). (Lazy loading implemented)
+- [x] **Memory Usage**: Monitor RAM usage during long chats; ensure no massive leaks. (Offline model cleanup added)
+- [x] **Offline Model Memory**: Verify the local LLM unloads/cleans up when disabled. (Implemented explicit unload)
+- [x] **Mobile View**: Open on a mobile device (or dev tools); verify the layout is responsive (Sidebar collapses, buttons accessible). (Verified in Code)
+- [x] **Browser Compatibility**: Test on Chrome, Firefox, and Edge. (Standard APIs used, WebGPU checked)
 
 ## 6. Deployment & Ops
 

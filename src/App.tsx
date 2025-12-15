@@ -1170,6 +1170,11 @@ function App() {
                 setIsOfflineMode(false);
                 return;
             }
+        } else {
+            // Unload model to free memory
+            import('./services/offlineAi').then(({ unloadOfflineModel }) => {
+                unloadOfflineModel();
+            });
         }
 
         setMessages(prev => [...prev, {

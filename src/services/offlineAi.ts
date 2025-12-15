@@ -39,6 +39,14 @@ export const initializeOfflineModel = async (
   }
 };
 
+export const unloadOfflineModel = async (): Promise<void> => {
+  if (engine) {
+    await engine.unload();
+    engine = null;
+    console.log("Offline Model Unloaded");
+  }
+};
+
 export const isOfflineModelReady = () => !!engine;
 
 export async function* generateOfflineResponseStream(
